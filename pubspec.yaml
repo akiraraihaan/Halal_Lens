@@ -32,6 +32,19 @@ dependencies:
     sdk: flutter
   cloud_firestore: ^4.13.6
   firebase_core: ^2.24.2
+  
+  # Camera and OCR
+  camera: ^0.10.5+9
+  google_mlkit_text_recognition: ^0.15.0
+  
+  # Barcode scanner
+  barcode_scan2: ^4.2.4
+  
+  # Text to Speech
+  flutter_tts: ^3.8.5
+  
+  # Permissions
+  permission_handler: ^11.2.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
