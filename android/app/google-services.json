@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "32708266425",
+    "project_id": "halal-lens-5597f",
+    "storage_bucket": "halal-lens-5597f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:32708266425:android:8e596fc871040c38b58e68",
+        "android_client_info": {
+          "package_name": "com.example.halal_lens"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvpIXJxM2SjqZtJD3V9IGbCRUJ9lHFA0U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
