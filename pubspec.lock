@@ -16,7 +16,6 @@ packages:
       sha256: "758e6d74e971c3e5aceb4110bfd6698efc7f501675bcfe0c775459a8140750eb"
       url: "https://pub.dev"
     source: hosted
-<<<<<<< HEAD
     version: "2.12.0"
   barcode_scan2:
     dependency: "direct main"
@@ -26,9 +25,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.1"
-=======
-    version: "2.13.0"
->>>>>>> 977095b14766263d90b5a7ac8bcc6c93db2c5bc4
   boolean_selector:
     dependency: transitive
     description:
