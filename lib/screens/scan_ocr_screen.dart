@@ -17,6 +17,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
   bool _loading = false;
+  bool _isFlashOn = false;
   String? _error;
   List<String> _ingredients = [];
   List<HaramComposition> _haramFound = [];
@@ -31,11 +32,27 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
     await Permission.camera.request();
     final cameras = await availableCameras();
     if (cameras.isNotEmpty) {
-      _cameraController = CameraController(cameras[0], ResolutionPreset.medium);
+      _cameraController = CameraController(cameras[0], ResolutionPreset.high);
       await _cameraController!.initialize();
       setState(() {
         _isCameraInitialized = true;
       });
+    }
+  }
+
+  Future<void> _toggleFlash() async {
+    if (_cameraController == null) return;
+    try {
+      if (_isFlashOn) {
+        await _cameraController!.setFlashMode(FlashMode.off);
+      } else {
+        await _cameraController!.setFlashMode(FlashMode.torch);
+      }
+      setState(() {
+        _isFlashOn = !_isFlashOn;
+      });
+    } catch (e) {
+      // Handle error
     }
   }
 
@@ -53,7 +70,6 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
       final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
       final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
       await textRecognizer.close();
-      // Ekstrak ingredient dari hasil OCR (sederhana: split koma/baris)
       String allText = recognizedText.text;
       List<String> ingredients = allText
           .replaceAll(';', ',')
@@ -98,63 +114,287 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan Komposisi (OCR)')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            if (_isCameraInitialized)
-              AspectRatio(
-                aspectRatio: _cameraController!.value.aspectRatio,
-                child: CameraPreview(_cameraController!),
-              ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loading ? null : _scanText,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 60),
-                backgroundColor: Colors.blueGrey,
-              ),
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Scan Komposisi', style: TextStyle(fontSize: 20)),
-            ),
-            const SizedBox(height: 24),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            if (_ingredients.isNotEmpty)
-              Card(
-                color: _statusColor().withOpacity(0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text('Status: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text(_statusText(), style: TextStyle(color: _statusColor(), fontWeight: FontWeight.bold)),
-                        ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blueGrey.shade100,
+              Colors.white,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Scan Komposisi',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 8),
-                      const Text('Komposisi:', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ..._ingredients.map((e) {
-                        final isHaram = _haramFound.any((h) => h.name.toLowerCase() == e);
-                        return Text(
-                          '- $e',
-                          style: TextStyle(color: isHaram ? Colors.red : null),
-                        );
-                      }),
-                      if (_haramFound.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        const Text('Bahan Haram Terdeteksi:', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                        ..._haramFound.map((h) => Text('- ${h.name} (${h.category})', style: const TextStyle(color: Colors.red))),
-                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                if (_isCameraInitialized)
+                  Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              spreadRadius: 2,
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: AspectRatio(
+                            aspectRatio: _cameraController!.value.aspectRatio,
+                            child: CameraPreview(_cameraController!),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                              color: Colors.white,
+                            ),
+                            onPressed: _toggleFlash,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              'Arahkan kamera ke komposisi produk',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _loading ? null : _scanText,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 60),
+                    backgroundColor: Colors.blueGrey,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _loading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.camera_alt),
+                            SizedBox(width: 8),
+                            Text(
+                              'Scan Komposisi',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                          ],
+                        ),
                 ),
-              ),
-          ],
+                const SizedBox(height: 24),
+                if (_error != null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _error!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_ingredients.isNotEmpty)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 16),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              spreadRadius: 5,
+                              blurRadius: 7,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _statusColor().withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    _statusText().toUpperCase(),
+                                    style: TextStyle(
+                                      color: _statusColor(),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Komposisi:',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ..._ingredients.map((e) {
+                              final isHaram = _haramFound.any((h) => h.name.toLowerCase() == e);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isHaram ? Icons.warning : Icons.check_circle,
+                                      size: 20,
+                                      color: isHaram ? Colors.red : Colors.green,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        e,
+                                        style: TextStyle(
+                                          color: isHaram ? Colors.red : null,
+                                          fontWeight: isHaram ? FontWeight.w500 : null,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                            if (_haramFound.isNotEmpty) ...[
+                              const SizedBox(height: 20),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.red.shade200),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.warning, color: Colors.red),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Bahan Haram Terdeteksi',
+                                          style: TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ..._haramFound.map((h) => Padding(
+                                          padding: const EdgeInsets.only(bottom: 8),
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.circle,
+                                                size: 8,
+                                                color: Colors.red,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  '${h.name} (${h.category})',
+                                                  style: const TextStyle(color: Colors.red),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
