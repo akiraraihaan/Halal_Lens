@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'screens/home_screen.dart';
+import 'services/data_migration_service.dart';
 // import 'firebase_options.dart'; // Uncomment if using generated firebase_options
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Add options: DefaultFirebaseOptions.currentPlatform jika pakai firebase_options.dart
+  
+  // Uncomment the line below to run data migration once
+  // await DataMigrationService.runFullMigration();
+  
   runApp(const MyApp());
 }
 

@@ -1,0 +1,66 @@
+{
+  "ingredients": {
+    "tepung terigu": {
+      "status": "halal",
+      "description": "Tepung yang terbuat dari gandum",
+      "justification": "Bahan dasar yang umum digunakan dan halal"
+    },
+    "penguat rasa": {
+      "status": "meragukan",
+      "description": "Bahan tambahan untuk meningkatkan rasa",
+      "justification": "Perlu dicek sumber dan proses pembuatannya",
+      "alternative_names": [
+        "monosodium glutamate",
+        "msg",
+        "vetsin",
+        "ajinomoto"
+      ]
+    },
+    "gelatin sapi": {
+      "status": "halal",
+      "description": "Gelatin yang berasal dari sapi",
+      "justification": "Berasal dari sapi yang disembelih secara halal",
+      "alternative_names": [
+        "beef gelatin",
+        "cow gelatin"
+      ]
+    },
+    "gelatin babi": {
+      "status": "haram",
+      "description": "Gelatin yang berasal dari babi",
+      "justification": "Berasal dari babi yang haram",
+      "alternative_names": [
+        "porcine gelatin",
+        "pork gelatin",
+        "swine gelatin",
+        "pig gelatin"
+      ]
+    },
+    "minyak sawit": {
+      "status": "halal",
+      "description": "Minyak yang berasal dari kelapa sawit",
+      "justification": "Berasal dari tumbuhan yang halal"
+    },
+    "garam": {
+      "status": "halal",
+      "description": "Natrium klorida",
+      "justification": "Bahan mineral yang halal"
+    },
+    "gula": {
+      "status": "halal",
+      "description": "Pemanis yang berasal dari tebu atau bit",
+      "justification": "Berasal dari tumbuhan yang halal"
+    },
+    "pengawet": {
+      "status": "meragukan",
+      "description": "Bahan tambahan untuk memperpanjang umur simpan",
+      "justification": "Perlu dicek jenis dan sumber pengawetnya",
+      "alternative_names": [
+        "preservative",
+        "bha",
+        "bht",
+        "sodium benzoate"
+      ]
+    }
+  }
+} 

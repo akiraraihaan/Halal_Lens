@@ -1,64 +1,107 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/halal_product.dart';
-import '../models/haram_composition.dart';
+import '../models/product.dart';
+import '../models/ingredient.dart';
 
 class FirebaseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
-  // Get halal product by barcode
-  static Future<HalalProduct?> getHalalProduct(String barcode) async {
+  // Get product by barcode
+  static Future<Product?> getProduct(String barcode) async {
     try {
       DocumentSnapshot doc = await _firestore
-          .collection('halal_product')
+          .collection('products')
           .doc(barcode)
           .get();
       
       if (doc.exists && doc.data() != null) {
-        return HalalProduct.fromFirestore(
+        return Product.fromFirestore(
           doc.data() as Map<String, dynamic>,
           doc.id,
         );
       }
       return null;
     } catch (e) {
-      print('Error fetching halal product: $e');
+      print('Error fetching product: $e');
       return null;
     }
   }
   
-  // Get all haram compositions
-  static Future<List<HaramComposition>> getAllHaramCompositions() async {
+  // Get all ingredients
+  static Future<List<Ingredient>> getAllIngredients() async {
     try {
       QuerySnapshot querySnapshot = await _firestore
-          .collection('haram_composition')
+          .collection('ingredients')
           .get();
       
       return querySnapshot.docs.map((doc) {
-        return HaramComposition.fromFirestore(
+        return Ingredient.fromFirestore(
           doc.data() as Map<String, dynamic>,
           doc.id,
         );
       }).toList();
     } catch (e) {
-      print('Error fetching haram compositions: $e');
+      print('Error fetching ingredients: $e');
       return [];
     }
   }
   
-  // Check ingredients against haram compositions
-  static Future<List<HaramComposition>> checkIngredients(List<String> ingredients) async {
-    List<HaramComposition> haramCompositions = await getAllHaramCompositions();
-    List<HaramComposition> foundHaramIngredients = [];
+  // Check compositions against ingredient database
+  static Future<Map<String, List<Ingredient>>> checkCompositions(List<String> compositions) async {
+    List<Ingredient> allIngredients = await getAllIngredients();
     
-    for (String ingredient in ingredients) {
-      for (HaramComposition haram in haramCompositions) {
-        if (haram.matchesIngredient(ingredient)) {
-          foundHaramIngredients.add(haram);
-          break; // Avoid duplicates
+    Map<String, List<Ingredient>> result = {
+      'halal': [],
+      'haram': [],
+      'meragukan': [],
+      'unknown': []
+    };
+    
+    for (String composition in compositions) {
+      bool found = false;
+      for (Ingredient ingredient in allIngredients) {
+        if (ingredient.matchesText(composition)) {
+          result[ingredient.status]?.add(ingredient);
+          found = true;
+          break;
         }
+      }
+      
+      if (!found) {
+        // Create unknown ingredient
+        Ingredient unknown = Ingredient(
+          name: composition,
+          status: 'unknown',
+          description: 'Bahan tidak dikenal dalam database',
+          justification: 'Perlu penelitian lebih lanjut',
+        );
+        result['unknown']?.add(unknown);
       }
     }
     
-    return foundHaramIngredients;
+    return result;
+  }
+  
+  // Add or update ingredient
+  static Future<void> addIngredient(Ingredient ingredient) async {
+    try {
+      await _firestore
+          .collection('ingredients')
+          .doc(ingredient.name)
+          .set(ingredient.toFirestore());
+    } catch (e) {
+      print('Error adding ingredient: $e');
+    }
+  }
+  
+  // Add or update product
+  static Future<void> addProduct(Product product) async {
+    try {
+      await _firestore
+          .collection('products')
+          .doc(product.barcode)
+          .set(product.toFirestore());
+    } catch (e) {
+      print('Error adding product: $e');
+    }
   }
 }

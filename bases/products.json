@@ -1,0 +1,30 @@
+{
+  "products": {
+    "8991234567890": {
+      "name": "Mie Instan ABC",
+      "certificate_number": "1234567890",
+      "expired_date": "1 January 2026 at 00:00:00 UTC+7",
+      "compositions": [
+        "tepung terigu",
+        "penguat rasa",
+        "gelatin sapi",
+        "minyak sawit",
+        "garam",
+        "gula"
+      ]
+    },
+    "8991234567891": {
+      "name": "Mie Instan XYZ",
+      "certificate_number": "1234567891",
+      "expired_date": "1 January 2026 at 00:00:00 UTC+7",
+      "compositions": [
+        "tepung terigu",
+        "minyak sawit",
+        "bumbu",
+        "garam",
+        "gula",
+        "pengawet"
+      ]
+    }
+  }
+} 
