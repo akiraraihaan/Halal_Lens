@@ -106,10 +106,11 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                 padding: EdgeInsets.all(isTablet ? 32.0 : 24.0),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+                    if (Navigator.canPop(context))
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     SizedBox(width: isTablet ? 12 : 8),
                     Text(
                       'Riwayat Scan',

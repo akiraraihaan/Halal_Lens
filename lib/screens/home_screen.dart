@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'scan_barcode_screen.dart';
 import 'scan_ocr_screen.dart';
 import 'scan_history_screen.dart';
+import 'admin_panel_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -44,6 +45,7 @@ class HomePage extends StatelessWidget {
     final isTablet = screenSize.width > 600;
     
     return Scaffold(
+      extendBody: true, // Tambahkan ini agar gradient sampai ke bawah
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -63,6 +65,7 @@ class HomePage extends StatelessWidget {
                   padding: EdgeInsets.all(isTablet ? 32.0 : 24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end, // Tambahkan ini agar konten menempel ke bawah
                     children: [
                       SizedBox(height: isTablet ? 30 : 20),
                       // Header Section
@@ -85,12 +88,19 @@ class HomePage extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Halal Lens',
-                                  style: TextStyle(
-                                    fontSize: isTablet ? 40 : 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
+                                GestureDetector(
+                                  onLongPress: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
+                                    );
+                                  },
+                                  child: Text(
+                                    'Halal Lens',
+                                    style: TextStyle(
+                                      fontSize: isTablet ? 40 : 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
                                   ),
                                 ),
                                 Text(
@@ -138,56 +148,6 @@ class HomePage extends StatelessWidget {
                                 isTablet,
                               ),
                             ],
-                          ),
-                        ),
-                      ),
-                      
-                      SizedBox(height: isTablet ? 150 : 120), // Extra space for bottom text
-                    ],
-                  ),
-                ),
-              ),
-              
-              // Bottom corner info text
-              Positioned(
-                bottom: 100, // Account for bottom navigation bar
-                left: 20,
-                right: 20,
-                child: Container(
-                  padding: EdgeInsets.all(isTablet ? 20 : 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.05),
-                        spreadRadius: 1,
-                        blurRadius: 6,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(isTablet ? 16 : 12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.info_outline,
-                          color: Colors.green,
-                          size: isTablet ? 28 : 24,
-                        ),
-                      ),
-                      SizedBox(width: isTablet ? 20 : 16),
-                      Expanded(
-                        child: Text(
-                          'Aplikasi ini membantu Anda memastikan kehalalan produk dengan mudah dan cepat',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: isTablet ? 16 : 14,
                           ),
                         ),
                       ),
