@@ -88,16 +88,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.green.shade50,
-              Colors.white,
-            ],
-          ),
-        ),
+        color: Colors.green.shade50, // hijau pastel sama dengan HomePage
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

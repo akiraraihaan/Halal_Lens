@@ -17,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.green.shade50, // hijau pastel
       body: _currentIndex == 0 ? const HomePage() : const ScanHistoryScreen(),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
@@ -30,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(32),
-                color: Colors.white,
+                color: Colors.green.shade50, // Samakan dengan background utama
               ),
               child: BottomNavigationBar(
                 currentIndex: _currentIndex,
@@ -45,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     label: 'Riwayat',
                   ),
                 ],
-                backgroundColor: Colors.white,
+                backgroundColor: Colors.white, // Navbar tetap putih
                 elevation: 0,
                 type: BottomNavigationBarType.fixed,
                 selectedItemColor: Colors.green,
@@ -69,27 +70,17 @@ class HomePage extends StatelessWidget {
     final isTablet = screenSize.width > 600;
     
     return Scaffold(
-      extendBody: true, // Tambahkan ini agar gradient sampai ke bawah
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.green.shade50,
-              Colors.white,
-            ],
-          ),
-        ),
+        color: Colors.green.shade50, // hijau pastel
         child: SafeArea(
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SingleChildScrollView(
+              Expanded(
                 child: Padding(
                   padding: EdgeInsets.all(isTablet ? 32.0 : 24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end, // Tambahkan ini agar konten menempel ke bawah
                     children: [
                       SizedBox(height: isTablet ? 30 : 20),
                       // Header Section
@@ -159,7 +150,8 @@ class HomePage extends StatelessWidget {
                                 ),
                                 isTablet,
                               ),
-                              SizedBox(height: isTablet ? 32 : 24),                              _buildFeatureCard(
+                              SizedBox(height: isTablet ? 32 : 24),
+                              _buildFeatureCard(
                                 context,
                                 'Scan Komposisi',
                                 'Pindai komposisi produk menggunakan OCR',
@@ -175,6 +167,7 @@ class HomePage extends StatelessWidget {
                           ),
                         ),
                       ),
+                      // Hilangkan SizedBox atau spacer di bawah
                     ],
                   ),
                 ),
