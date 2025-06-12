@@ -18,19 +18,43 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _currentIndex == 0 ? const HomePage() : const ScanHistoryScreen(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
+        child: PhysicalModel(
+          color: Colors.white,
+          elevation: 12,
+          borderRadius: BorderRadius.circular(32),
+          shadowColor: Colors.black.withOpacity(0.2),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(32),
+                color: Colors.white,
+              ),
+              child: BottomNavigationBar(
+                currentIndex: _currentIndex,
+                onTap: (index) => setState(() => _currentIndex = index),
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.home),
+                    label: 'Home',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.history),
+                    label: 'Riwayat',
+                  ),
+                ],
+                backgroundColor: Colors.white,
+                elevation: 0,
+                type: BottomNavigationBarType.fixed,
+                selectedItemColor: Colors.green,
+                unselectedItemColor: Colors.grey,
+                showUnselectedLabels: true,
+              ),
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Riwayat',
-          ),
-        ],
+        ),
       ),
     );
   }
