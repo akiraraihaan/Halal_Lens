@@ -168,13 +168,13 @@ class HomePage extends StatelessWidget {
           height: isTablet ? 160 : 160,
           padding: EdgeInsets.all(isTablet ? 24 : 20),
           decoration: BoxDecoration(
-            color: AppColors.white,
+            color: AppColors.white.withOpacity(0.7),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 8,
+                color: color.withOpacity(0.15),
+                spreadRadius: 4,
+                blurRadius: 16,
                 offset: const Offset(0, 2),
               ),
             ],
