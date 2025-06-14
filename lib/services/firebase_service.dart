@@ -45,6 +45,24 @@ class FirebaseService {
     }
   }
   
+  // Get all products
+  static Future<List<Product>> getAllProducts() async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('products')
+          .get();
+      return querySnapshot.docs.map((doc) {
+        return Product.fromFirestore(
+          doc.data() as Map<String, dynamic>,
+          doc.id,
+        );
+      }).toList();
+    } catch (e) {
+      print('Error fetching products: $e');
+      return [];
+    }
+  }
+
   // Check compositions against ingredient database
   static Future<Map<String, List<Ingredient>>> checkCompositions(List<String> compositions) async {
     List<Ingredient> allIngredients = await getAllIngredients();
@@ -102,6 +120,48 @@ class FirebaseService {
           .set(product.toFirestore());
     } catch (e) {
       print('Error adding product: $e');
+    }
+  }
+
+  // Update ingredient
+  static Future<void> updateIngredient(String name, Ingredient ingredient) async {
+    try {
+      await _firestore
+          .collection('ingredients')
+          .doc(name)
+          .set(ingredient.toFirestore());
+    } catch (e) {
+      print('Error updating ingredient: $e');
+    }
+  }
+
+  // Update product
+  static Future<void> updateProduct(String barcode, Product product) async {
+    try {
+      await _firestore
+          .collection('products')
+          .doc(barcode)
+          .set(product.toFirestore());
+    } catch (e) {
+      print('Error updating product: $e');
+    }
+  }
+
+  // Delete ingredient
+  static Future<void> deleteIngredient(String name) async {
+    try {
+      await _firestore.collection('ingredients').doc(name).delete();
+    } catch (e) {
+      print('Error deleting ingredient: $e');
+    }
+  }
+
+  // Delete product
+  static Future<void> deleteProduct(String barcode) async {
+    try {
+      await _firestore.collection('products').doc(barcode).delete();
+    } catch (e) {
+      print('Error deleting product: $e');
     }
   }
 }
