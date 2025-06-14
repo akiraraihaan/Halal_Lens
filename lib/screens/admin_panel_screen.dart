@@ -287,7 +287,15 @@ class _EditIngredientDialogState extends State<_EditIngredientDialog> {
               justification: justification,
               alternativeNames: alternativeNames.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
             );
-            await FirebaseService.updateIngredient(widget.ingredient.name, updatedIngredient);
+            final oldName = widget.ingredient.name.trim();
+            final newName = name.trim();
+            if (oldName != newName) {
+              // Buat dokumen baru, hapus yang lama
+              await FirebaseService.addIngredient(updatedIngredient);
+              await FirebaseService.deleteIngredient(oldName);
+            } else {
+              await FirebaseService.updateIngredient(oldName, updatedIngredient);
+            }
             Navigator.pop(context);
           },
           child: const Text('Simpan'),
