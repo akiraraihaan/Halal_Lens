@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
+
 import '../services/firebase_service.dart';
 import '../services/history_service.dart';
+import '../services/accessibility_provider.dart';
 import '../models/ingredient.dart';
 import '../models/scan_history.dart';
 // import 'package:flutter_tts/flutter_tts.dart'; // Uncomment if using flutter_tts
@@ -145,6 +148,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
   }
   @override
   Widget build(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context);
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
     
@@ -169,14 +173,14 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back),
+                      icon: Icon(Icons.arrow_back, size: access.iconSize),
                       onPressed: () => Navigator.pop(context),
                     ),
                     SizedBox(width: isTablet ? 12 : 8),
                     Text(
                       'Scan Komposisi',
                       style: TextStyle(
-                        fontSize: isTablet ? 28 : 24,
+                        fontSize: access.fontSize * 1.2,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

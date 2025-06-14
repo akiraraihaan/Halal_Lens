@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'scan_barcode_screen.dart';
 import 'scan_ocr_screen.dart';
 import 'scan_history_screen.dart';
 import 'admin_panel_screen.dart';
+import 'accessibility_settings_screen.dart';
 import '../constants/app_constants.dart';
+import '../services/accessibility_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -15,11 +18,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
+  final List<Widget> _pages = const [
+    HomePage(),
+    ScanHistoryScreen(),
+    AccessibilitySettingsScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context);
     return Scaffold(
       backgroundColor: AppColors.background, // hijau pastel
-      body: _currentIndex == 0 ? const HomePage() : const ScanHistoryScreen(),
+      body: _pages[_currentIndex],
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
         child: PhysicalModel(
@@ -37,14 +47,18 @@ class _HomeScreenState extends State<HomeScreen> {
               child: BottomNavigationBar(
                 currentIndex: _currentIndex,
                 onTap: (index) => setState(() => _currentIndex = index),
-                items: const [
+                items: [
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.home),
+                    icon: Icon(Icons.home, size: access.iconSize),
                     label: 'Home',
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.history),
+                    icon: Icon(Icons.history, size: access.iconSize),
                     label: 'Riwayat',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.accessibility_new, size: access.iconSize),
+                    label: 'Aksesibilitas',
                   ),
                 ],
                 backgroundColor: Colors.white, // Navbar tetap putih
@@ -53,6 +67,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 selectedItemColor: AppColors.primary,
                 unselectedItemColor: AppColors.grey,
                 showUnselectedLabels: true,
+                selectedLabelStyle: TextStyle(fontSize: access.fontSize),
+                unselectedLabelStyle: TextStyle(fontSize: access.fontSize),
               ),
             ),
           ),
@@ -67,6 +83,7 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context);
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
     
@@ -111,7 +128,7 @@ class HomePage extends StatelessWidget {
                           _buildFeatureCard(
                             context,
                             'Scan Barcode',
-                            'Pindai barcode produk untuk memeriksa kehalalan',
+                            '', // subtitle dikosongkan
                             Icons.qr_code_scanner,
                             AppColors.primary,
                             () => Navigator.push(
@@ -119,12 +136,13 @@ class HomePage extends StatelessWidget {
                               MaterialPageRoute(builder: (context) => const ScanBarcodeScreen()),
                             ),
                             isTablet,
+                            access,
                           ),
                           SizedBox(width: isTablet ? 32 : 24),
                           _buildFeatureCard(
                             context,
                             'Scan Komposisi',
-                            'Pindai komposisi produk menggunakan OCR',
+                            '', // subtitle dikosongkan
                             Icons.document_scanner,
                             AppColors.secondary,
                             () => Navigator.push(
@@ -132,6 +150,7 @@ class HomePage extends StatelessWidget {
                               MaterialPageRoute(builder: (context) => const ScanOCRScreen()),
                             ),
                             isTablet,
+                            access,
                           ),
                         ],
                       ),
@@ -154,6 +173,7 @@ class HomePage extends StatelessWidget {
     Color color,
     VoidCallback onTap,
     bool isTablet,
+    AccessibilityProvider access,
   ) {
     return Card(
       elevation: 2,
@@ -179,32 +199,39 @@ class HomePage extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.all(isTablet ? 20 : 16),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isTablet ? 20 : 16),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: access.iconSize,
+                    color: color,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: isTablet ? 48 : 40,
-                  color: color,
+                SizedBox(height: isTablet ? 16 : 12),
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: access.fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
                 ),
-              ),
-              SizedBox(height: isTablet ? 16 : 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: isTablet ? 16 : 14,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

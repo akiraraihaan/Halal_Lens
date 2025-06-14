@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/scan_history.dart';
+import '../services/accessibility_provider.dart';
 import '../services/history_service.dart';
 
 class ScanHistoryScreen extends StatefulWidget {
@@ -83,6 +85,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context);
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
 
@@ -99,21 +102,21 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                   children: [
                     if (Navigator.canPop(context))
                       IconButton(
-                        icon: const Icon(Icons.arrow_back),
+                        icon: Icon(Icons.arrow_back, size: access.iconSize),
                         onPressed: () => Navigator.pop(context),
                       ),
                     SizedBox(width: isTablet ? 12 : 8),
                     Text(
                       'Riwayat Scan',
                       style: TextStyle(
-                        fontSize: isTablet ? 28 : 24,
+                        fontSize: access.fontSize * 1.2,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const Spacer(),
                     if (_history.isNotEmpty)
                       IconButton(
-                        icon: const Icon(Icons.delete_sweep),
+                        icon: Icon(Icons.delete_sweep, size: access.iconSize),
                         onPressed: _clearAllHistory,
                         tooltip: 'Clear All History',
                       ),
@@ -130,14 +133,14 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                               children: [
                                 Icon(
                                   Icons.history,
-                                  size: isTablet ? 80 : 64,
+                                  size: access.iconSize * 2.5,
                                   color: Colors.grey.shade400,
                                 ),
                                 SizedBox(height: isTablet ? 20 : 16),
                                 Text(
                                   'Belum ada riwayat scan',
                                   style: TextStyle(
-                                    fontSize: isTablet ? 20 : 18,
+                                    fontSize: access.fontSize * 1.1,
                                     color: Colors.grey.shade600,
                                   ),
                                 ),
@@ -145,7 +148,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                                 Text(
                                   'Mulai scan produk untuk melihat riwayat',
                                   style: TextStyle(
-                                    fontSize: isTablet ? 16 : 14,
+                                    fontSize: access.fontSize,
                                     color: Colors.grey.shade500,
                                   ),
                                 ),
@@ -160,7 +163,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                             itemCount: _history.length,
                             itemBuilder: (context, index) {
                               final item = _history[index];
-                              return _buildHistoryItem(item, isTablet);
+                              return _buildHistoryItem(item, isTablet, access);
                             },
                           ),
               ),
@@ -171,7 +174,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
     );
   }
 
-  Widget _buildHistoryItem(ScanHistory item, bool isTablet) {
+  Widget _buildHistoryItem(ScanHistory item, bool isTablet, AccessibilityProvider access) {
     return Card(
       margin: EdgeInsets.only(bottom: isTablet ? 16 : 12),
       elevation: 1,
@@ -197,7 +200,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                     child: Icon(
                       _getScanTypeIcon(item.scanType),
                       color: _getStatusColor(item.overallStatus),
-                      size: isTablet ? 24 : 20,
+                      size: access.iconSize,
                     ),
                   ),
                   SizedBox(width: isTablet ? 16 : 12),
@@ -208,7 +211,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                         Text(
                           item.productName,
                           style: TextStyle(
-                            fontSize: isTablet ? 18 : 16,
+                            fontSize: access.fontSize,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 2,
@@ -230,18 +233,18 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                                 item.overallStatus.toUpperCase(),
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: isTablet ? 12 : 10,
+                                  fontSize: access.fontSize * 0.8,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                             if (item.barcode != null) ...[
                               SizedBox(width: isTablet ? 12 : 8),
-                              Text(
-                                item.barcode!,
-                                style: TextStyle(
-                                  fontSize: isTablet ? 14 : 12,
-                                  color: Colors.grey.shade600,
+                              Flexible(
+                                child: Text(
+                                  item.barcode!,
+                                  style: TextStyle(fontSize: access.fontSize * 0.8, color: Colors.grey.shade700),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -251,9 +254,8 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline),
+                    icon: Icon(Icons.delete, color: Colors.red, size: access.iconSize),
                     onPressed: () => _deleteHistoryItem(item.id),
-                    color: Colors.grey.shade600,
                   ),
                 ],
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/firebase_service.dart';
 import '../services/history_service.dart';
 import '../models/product.dart';
@@ -6,6 +7,7 @@ import '../models/ingredient.dart';
 import '../models/scan_history.dart';
 import 'package:barcode_scan2/barcode_scan2.dart';
 import '../constants/app_constants.dart';
+import '../services/accessibility_provider.dart';
 
 class ScanBarcodeScreen extends StatefulWidget {
   const ScanBarcodeScreen({Key? key}) : super(key: key);
@@ -123,6 +125,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context);
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
     
@@ -132,12 +135,12 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.primary),
+          icon: Icon(Icons.arrow_back, color: AppColors.primary, size: access.iconSize),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           AppText.scanBarcodeTitle,
-          style: AppStyles.heading.copyWith(color: AppColors.primary),
+          style: AppStyles.heading.copyWith(color: AppColors.primary, fontSize: access.fontSize * 1.2),
         ),
       ),
       body: SafeArea(
@@ -168,14 +171,14 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                       children: [
                         Icon(
                           Icons.qr_code_scanner,
-                          size: isTablet ? AppSizes.iconSizeTablet : AppSizes.iconSize,
+                          size: access.iconSize * 1.5,
                           color: AppColors.primary,
                         ),
                         SizedBox(height: isTablet ? AppSizes.spacingLarge : AppSizes.spacingMedium),
                         Text(
                           AppText.scanBarcodeSubtitle,
                           textAlign: TextAlign.center,
-                          style: AppStyles.body.copyWith(color: AppColors.grey),
+                          style: AppStyles.body.copyWith(color: AppColors.grey, fontSize: access.fontSize),
                         ),
                       ],
                     ),
@@ -201,11 +204,11 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.camera_alt, color: AppColors.white),
+                              Icon(Icons.camera_alt, color: AppColors.white, size: access.iconSize),
                               SizedBox(width: isTablet ? AppSizes.spacingMedium : AppSizes.spacingSmall),
                               Text(
                                 AppText.startScanBarcode,
-                                style: AppStyles.button.copyWith(color: AppColors.white),
+                                style: AppStyles.button.copyWith(color: AppColors.white, fontSize: access.fontSize),
                               ),
                             ],
                           ),
@@ -223,11 +226,11 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.qr_code, color: AppColors.grey),
+                      Icon(Icons.qr_code, color: AppColors.grey, size: access.iconSize),
                       SizedBox(width: AppSizes.spacingSmall),
                       Text(
                         '${AppText.barcodeLabel}: $_barcode',
-                        style: AppStyles.body.copyWith(fontWeight: FontWeight.w500),
+                        style: AppStyles.body.copyWith(fontWeight: FontWeight.w500, fontSize: access.fontSize),
                       ),
                     ],
                   ),

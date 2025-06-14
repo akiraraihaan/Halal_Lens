@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'services/data_migration_service.dart';
+import 'services/accessibility_provider.dart';
 // import 'firebase_options.dart'; // Uncomment if using generated firebase_options
 
 void main() async {
@@ -11,7 +13,12 @@ void main() async {
   // Uncomment the line below to run data migration once
   // await DataMigrationService.runFullMigration();
   
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AccessibilityProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -20,6 +27,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context);
     return MaterialApp(
       title: 'Halal Lens',
       theme: ThemeData(
@@ -39,6 +47,10 @@ class MyApp extends StatelessWidget {
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        textTheme: Theme.of(context).textTheme.apply(
+          fontSizeFactor: access.fontSize / 16,
+        ),
+        iconTheme: IconThemeData(size: access.iconSize),
       ),
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
