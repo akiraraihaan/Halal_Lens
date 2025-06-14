@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/accessibility_provider.dart';
 
 class AppColors {
   static const Color primary = Color.fromRGBO(22, 97, 56, 1); // Green
@@ -90,31 +92,42 @@ class AppSizes {
 }
 
 class AppStyles {
-  static TextStyle get heading => const TextStyle(
-    fontSize: AppSizes.fontSizeXLarge,
-    fontWeight: FontWeight.w800,
-    color: AppColors.textPrimary,
-    letterSpacing: -0.5,
-  );
+  static TextStyle heading(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context, listen: false);
+    return TextStyle(
+      fontSize: access.fontSize * 1.5,
+      fontWeight: FontWeight.w800,
+      color: AppColors.textPrimary,
+      letterSpacing: -0.5,
+    );
+  }
   
-  static TextStyle get subheading => const TextStyle(
-    fontSize: AppSizes.fontSizeMedium,
-    color: AppColors.textSecondary,
-    height: 1.4,
-  );
+  static TextStyle subheading(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context, listen: false);
+    return TextStyle(
+      fontSize: access.fontSize,
+      color: AppColors.textSecondary,
+      height: 1.4,
+    );
+  }
   
-  static TextStyle get buttonText => const TextStyle(
-    fontSize: AppSizes.fontSizeMedium,
-    fontWeight: FontWeight.bold,
-  );
-
-  static const TextStyle body = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.normal,
-  );
+  static TextStyle body(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context, listen: false);
+    return TextStyle(
+      fontSize: access.fontSize,
+      color: AppColors.textPrimary,
+    );
+  }
 
   static const TextStyle button = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
   );
+}
+
+class AppIconSizes {
+  static double size(BuildContext context) {
+    final access = Provider.of<AccessibilityProvider>(context, listen: false);
+    return access.iconSize;
+  }
 } 

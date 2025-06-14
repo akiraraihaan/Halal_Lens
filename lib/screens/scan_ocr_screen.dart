@@ -9,6 +9,7 @@ import '../services/history_service.dart';
 import '../services/accessibility_provider.dart';
 import '../models/ingredient.dart';
 import '../models/scan_history.dart';
+import '../constants/app_constants.dart';
 // import 'package:flutter_tts/flutter_tts.dart'; // Uncomment if using flutter_tts
 
 class ScanOCRScreen extends StatefulWidget {
@@ -158,7 +159,10 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
+            colors: access.isColorBlindMode ? [
+              AppColors.backgroundMonochrome,
+              AppColors.backgroundMonochrome.withOpacity(0.8),
+            ] : [
               Colors.blueGrey.shade50,
               Colors.white,
             ],
@@ -179,10 +183,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                     SizedBox(width: isTablet ? 12 : 8),
                     Text(
                       'Scan Komposisi',
-                      style: TextStyle(
-                        fontSize: access.fontSize * 1.2,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppStyles.heading(context),
                     ),
                   ],
                 ),
@@ -246,10 +247,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                                 ),
                                 child: Text(
                                   'Arahkan kamera ke komposisi produk',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: isTablet ? 16 : 14,
-                                  ),
+                                  style: AppStyles.body(context),
                                 ),
                               ),
                             ),
@@ -277,11 +275,11 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.camera_alt),
+                                Icon(Icons.camera_alt, size: AppIconSizes.size(context)),
                                 SizedBox(width: isTablet ? 12 : 8),
                                 Text(
                                   'Scan Komposisi',
-                                  style: TextStyle(fontSize: isTablet ? 20 : 18),
+                                  style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: AppColors.white),
                                 ),
                               ],
                             ),
@@ -299,7 +297,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
+                        Icon(Icons.error_outline, color: Colors.red, size: AppIconSizes.size(context)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -344,10 +342,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                                   ),
                                   child: Text(
                                     _statusText().toUpperCase(),
-                                    style: TextStyle(
-                                      color: _statusColor(),
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: _statusColor()),
                                   ),
                                 ),
                               ],
@@ -410,16 +405,12 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                 title.contains('Haram') ? Icons.warning : 
                 title.contains('Meragukan') || title.contains('Tidak Dikenal') ? Icons.help_outline : Icons.check_circle,
                 color: color,
-                size: 20,
+                size: AppIconSizes.size(context),
               ),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+                style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: color),
               ),
             ],
           ),
@@ -430,7 +421,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
               children: [
                 Icon(
                   Icons.circle,
-                  size: 6,
+                  size: AppIconSizes.size(context),
                   color: color,
                 ),
                 const SizedBox(width: 8),
@@ -440,19 +431,12 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                     children: [
                       Text(
                         ingredient.name,
-                        style: TextStyle(
-                          color: color.withOpacity(0.8),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: AppStyles.body(context).copyWith(fontWeight: FontWeight.w500, color: color.withOpacity(0.8)),
                       ),
                       if (ingredient.description.isNotEmpty)
                         Text(
                           ingredient.description,
-                          style: TextStyle(
-                            color: color.withOpacity(0.6),
-                            fontSize: 11,
-                          ),
+                          style: AppStyles.body(context).copyWith(color: color.withOpacity(0.6)),
                         ),
                     ],
                   ),

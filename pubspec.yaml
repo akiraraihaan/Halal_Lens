@@ -80,6 +80,7 @@ flutter:
     - bases/ingredients.json
     - bases/products.json
     - assets/images/HalalLensHorizontal.png
+    - assets/images/HalalLensHorizontalMonokrom.png
     - assets/images/HalalLensVertikal.png
     - assets/images/HalalLens.png
 

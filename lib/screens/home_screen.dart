@@ -27,8 +27,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final access = Provider.of<AccessibilityProvider>(context);
+    final isColorBlind = access.isColorBlindMode;
+    
     return Scaffold(
-      backgroundColor: AppColors.background, // hijau pastel
+      backgroundColor: isColorBlind ? AppColors.backgroundMonochrome : AppColors.background,
       body: _pages[_currentIndex],
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
@@ -42,33 +44,33 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(32),
-                color: Colors.green.shade50, // Samakan dengan background utama
+                color: isColorBlind ? AppColors.backgroundMonochrome : Colors.green.shade50,
               ),
               child: BottomNavigationBar(
                 currentIndex: _currentIndex,
                 onTap: (index) => setState(() => _currentIndex = index),
                 items: [
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.home, size: access.iconSize),
+                    icon: Icon(Icons.home, size: AppIconSizes.size(context)),
                     label: 'Home',
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.history, size: access.iconSize),
+                    icon: Icon(Icons.history, size: AppIconSizes.size(context)),
                     label: 'Riwayat',
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.accessibility_new, size: access.iconSize),
+                    icon: Icon(Icons.accessibility_new, size: AppIconSizes.size(context)),
                     label: 'Aksesibilitas',
                   ),
                 ],
-                backgroundColor: Colors.white, // Navbar tetap putih
+                backgroundColor: Colors.white,
                 elevation: 0,
                 type: BottomNavigationBarType.fixed,
-                selectedItemColor: AppColors.primary,
-                unselectedItemColor: AppColors.grey,
+                selectedItemColor: isColorBlind ? AppColors.primaryMonochrome : AppColors.primary,
+                unselectedItemColor: isColorBlind ? AppColors.secondaryMonochrome : AppColors.grey,
                 showUnselectedLabels: true,
-                selectedLabelStyle: TextStyle(fontSize: access.fontSize),
-                unselectedLabelStyle: TextStyle(fontSize: access.fontSize),
+                selectedLabelStyle: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold),
+                unselectedLabelStyle: AppStyles.body(context),
               ),
             ),
           ),
@@ -84,12 +86,13 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final access = Provider.of<AccessibilityProvider>(context);
+    final isColorBlind = access.isColorBlindMode;
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
     
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: isColorBlind ? AppColors.backgroundMonochrome : AppColors.background,
         elevation: 0,
         toolbarHeight: 150,
         title: GestureDetector(
@@ -101,7 +104,7 @@ class HomePage extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(top: 80, bottom: 40),
             child: Image.asset(
-              'assets/images/HalalLensHorizontal.png',
+              isColorBlind ? 'assets/images/HalalLensHorizontalMonokrom.png' : 'assets/images/HalalLensHorizontal.png',
               height: 80,
             ),
           ),
@@ -109,7 +112,7 @@ class HomePage extends StatelessWidget {
         centerTitle: true,
       ),
       body: Container(
-        color: AppColors.background,
+        color: isColorBlind ? AppColors.backgroundMonochrome : AppColors.background,
         child: SafeArea(
           child: Padding(
             padding: EdgeInsets.all(isTablet ? 32.0 : 24.0),
@@ -117,7 +120,6 @@ class HomePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: isTablet ? 40 : 32),            
-                // Feature Cards
                 Expanded(
                   child: Center(
                     child: ConstrainedBox(
@@ -128,9 +130,9 @@ class HomePage extends StatelessWidget {
                           _buildFeatureCard(
                             context,
                             'Scan Barcode',
-                            '', // subtitle dikosongkan
+                            '',
                             Icons.qr_code_scanner,
-                            AppColors.primary,
+                            isColorBlind ? AppColors.primaryMonochrome : AppColors.primary,
                             () => Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const ScanBarcodeScreen()),
@@ -142,9 +144,9 @@ class HomePage extends StatelessWidget {
                           _buildFeatureCard(
                             context,
                             'Scan Komposisi',
-                            '', // subtitle dikosongkan
+                            '',
                             Icons.document_scanner,
-                            AppColors.secondary,
+                            isColorBlind ? AppColors.secondaryMonochrome : AppColors.secondary,
                             () => Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const ScanOCRScreen()),
@@ -165,7 +167,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureCard(
+  Widget  _buildFeatureCard(
     BuildContext context,
     String title,
     String subtitle,
@@ -175,6 +177,8 @@ class HomePage extends StatelessWidget {
     bool isTablet,
     AccessibilityProvider access,
   ) {
+    final isColorBlind = access.isColorBlindMode;
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -185,10 +189,10 @@ class HomePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           width: isTablet ? 160 : 160,
-          height: isTablet ? 160 : 160,
+          height: isTablet ? 200 : 200,
           padding: EdgeInsets.all(isTablet ? 24 : 20),
           decoration: BoxDecoration(
-            color: AppColors.white.withOpacity(0.7),
+            color: isColorBlind ? AppColors.backgroundMonochrome : AppColors.white.withOpacity(0.7),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -212,7 +216,7 @@ class HomePage extends StatelessWidget {
                   ),
                   child: Icon(
                     icon,
-                    size: access.iconSize,
+                    size: AppIconSizes.size(context),
                     color: color,
                   ),
                 ),
@@ -220,11 +224,7 @@ class HomePage extends StatelessWidget {
                 Flexible(
                   child: Text(
                     title,
-                    style: TextStyle(
-                      fontSize: access.fontSize,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
+                    style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: color),
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
@@ -238,4 +238,3 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/scan_history.dart';
 import '../services/accessibility_provider.dart';
 import '../services/history_service.dart';
+import '../constants/app_constants.dart';
 
 class ScanHistoryScreen extends StatefulWidget {
   const ScanHistoryScreen({Key? key}) : super(key: key);
@@ -91,7 +92,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
 
     return Scaffold(
       body: Container(
-        color: Colors.green.shade50, // hijau pastel sama dengan HomePage
+        color: access.isColorBlindMode ? AppColors.backgroundMonochrome : Colors.green.shade50,
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,10 +109,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                     SizedBox(width: isTablet ? 12 : 8),
                     Text(
                       'Riwayat Scan',
-                      style: TextStyle(
-                        fontSize: access.fontSize * 1.2,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppStyles.heading(context),
                     ),
                     const Spacer(),
                     if (_history.isNotEmpty)
@@ -139,18 +137,12 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                                 SizedBox(height: isTablet ? 20 : 16),
                                 Text(
                                   'Belum ada riwayat scan',
-                                  style: TextStyle(
-                                    fontSize: access.fontSize * 1.1,
-                                    color: Colors.grey.shade600,
-                                  ),
+                                  style: AppStyles.body(context).copyWith(color: Colors.grey.shade600),
                                 ),
                                 SizedBox(height: isTablet ? 12 : 8),
                                 Text(
                                   'Mulai scan produk untuk melihat riwayat',
-                                  style: TextStyle(
-                                    fontSize: access.fontSize,
-                                    color: Colors.grey.shade500,
-                                  ),
+                                  style: AppStyles.body(context).copyWith(color: Colors.grey.shade500),
                                 ),
                               ],
                             ),
@@ -210,10 +202,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                       children: [
                         Text(
                           item.productName,
-                          style: TextStyle(
-                            fontSize: access.fontSize,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -231,11 +220,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                               ),
                               child: Text(
                                 item.overallStatus.toUpperCase(),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: access.fontSize * 0.8,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: AppStyles.body(context).copyWith(color: Colors.white, fontWeight: FontWeight.bold),
                               ),
                             ),
                             if (item.barcode != null) ...[
@@ -243,7 +228,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                               Flexible(
                                 child: Text(
                                   item.barcode!,
-                                  style: TextStyle(fontSize: access.fontSize * 0.8, color: Colors.grey.shade700),
+                                  style: AppStyles.body(context).copyWith(color: Colors.grey.shade700),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -262,19 +247,13 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
               SizedBox(height: isTablet ? 12 : 8),
               Text(
                 _formatDate(item.scanDate),
-                style: TextStyle(
-                  fontSize: isTablet ? 14 : 12,
-                  color: Colors.grey.shade600,
-                ),
+                style: AppStyles.body(context),
               ),
               if (item.compositions.isNotEmpty) ...[
                 SizedBox(height: isTablet ? 8 : 6),
                 Text(
                   'Komposisi: ${item.compositions.take(3).join(", ")}${item.compositions.length > 3 ? "..." : ""}',
-                  style: TextStyle(
-                    fontSize: isTablet ? 14 : 12,
-                    color: Colors.grey.shade700,
-                  ),
+                  style: AppStyles.body(context).copyWith(color: Colors.grey.shade700),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -289,7 +268,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(item.productName),
+        title: Text(item.productName, style: AppStyles.heading(context)),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,27 +276,27 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
             children: [
               Row(
                 children: [
-                  Icon(_getScanTypeIcon(item.scanType)),
+                  Icon(_getScanTypeIcon(item.scanType), size: AppIconSizes.size(context)),
                   SizedBox(width: 8),
-                  Text('${item.scanType == 'barcode' ? 'Barcode' : 'OCR'} Scan'),
+                  Text('${item.scanType == 'barcode' ? 'Barcode' : 'OCR'} Scan', style: AppStyles.body(context)),
                 ],
               ),
               if (item.barcode != null) ...[
                 SizedBox(height: 8),
-                Text('Barcode: ${item.barcode}'),
+                Text('Barcode: ${item.barcode}', style: AppStyles.body(context)),
               ],
               SizedBox(height: 8),
-              Text('Status: ${item.overallStatus.toUpperCase()}'),
+              Text('Status: ${item.overallStatus.toUpperCase()}', style: AppStyles.body(context)),
               SizedBox(height: 8),
-              Text('Tanggal: ${_formatDate(item.scanDate)}'),
+              Text('Tanggal: ${_formatDate(item.scanDate)}', style: AppStyles.body(context)),
               if (item.compositions.isNotEmpty) ...[
                 SizedBox(height: 16),
                 Text(
                   'Komposisi:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
-                ...item.compositions.map((comp) => Text('• $comp')),
+                ...item.compositions.map((comp) => Text('• $comp', style: AppStyles.body(context))),
               ],
             ],
           ),

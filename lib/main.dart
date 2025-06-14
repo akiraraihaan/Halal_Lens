@@ -77,7 +77,7 @@ class MyApp extends StatelessWidget {
         ),
         
         // Card theme
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: access.isColorBlindMode ? AppColors.white : AppColors.white,
           shadowColor: access.isColorBlindMode ? AppColors.secondaryMonochrome.withOpacity(0.3) : AppColors.secondary.withOpacity(0.3),
         ),

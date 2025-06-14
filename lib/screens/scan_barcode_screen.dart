@@ -8,6 +8,8 @@ import '../models/scan_history.dart';
 import 'package:barcode_scan2/barcode_scan2.dart';
 import '../constants/app_constants.dart';
 import '../services/accessibility_provider.dart';
+import 'scan_ocr_screen.dart';
+import 'package:camera/camera.dart';
 
 class ScanBarcodeScreen extends StatefulWidget {
   const ScanBarcodeScreen({Key? key}) : super(key: key);
@@ -22,6 +24,38 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
   String? _error;
   bool _loading = false;
   Map<String, List<Ingredient>> _compositionAnalysis = {};
+  CameraController? _cameraController;
+  bool _isCameraInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCameraAndScan();
+  }
+
+  Future<void> _initCameraAndScan() async {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isNotEmpty) {
+        _cameraController = CameraController(cameras[0], ResolutionPreset.medium);
+        await _cameraController!.initialize();
+        setState(() {
+          _isCameraInitialized = true;
+        });
+        _scanBarcode();
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Kamera gagal diinisialisasi';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
 
   Future<void> _scanBarcode() async {
     setState(() {
@@ -130,92 +164,50 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
     final isTablet = screenSize.width > 600;
     
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: access.isColorBlindMode ? AppColors.backgroundMonochrome : AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: access.isColorBlindMode ? AppColors.backgroundMonochrome : AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.primary, size: access.iconSize),
+          icon: Icon(
+            Icons.arrow_back, 
+            color: access.isColorBlindMode ? AppColors.primaryMonochrome : AppColors.primary, 
+            size: access.iconSize
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           AppText.scanBarcodeTitle,
-          style: AppStyles.heading.copyWith(color: AppColors.primary, fontSize: access.fontSize * 1.2),
+          style: AppStyles.heading(context).copyWith(
+            color: access.isColorBlindMode ? AppColors.primaryMonochrome : AppColors.primary, 
+            fontSize: access.fontSize * 1.2
+          ),
         ),
       ),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(isTablet ? AppSizes.screenPaddingXLarge : AppSizes.screenPaddingLarge),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
+              SizedBox(height: isTablet ? 32 : 16),
               Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
-                  child: Container(
-                    padding: EdgeInsets.all(isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(AppSizes.borderRadiusLarge),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.1),
-                          spreadRadius: 2,
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.qr_code_scanner,
-                          size: access.iconSize * 1.5,
-                          color: AppColors.primary,
-                        ),
-                        SizedBox(height: isTablet ? AppSizes.spacingLarge : AppSizes.spacingMedium),
-                        Text(
-                          AppText.scanBarcodeSubtitle,
-                          textAlign: TextAlign.center,
-                          style: AppStyles.body.copyWith(color: AppColors.grey, fontSize: access.fontSize),
-                        ),
-                      ],
-                    ),
+                child: Container(
+                  width: isTablet ? 400 : 300,
+                  height: isTablet ? 300 : 220,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.black,
                   ),
+                  child: _isCameraInitialized && _cameraController != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: CameraPreview(_cameraController!),
+                        )
+                      : Center(child: CircularProgressIndicator()),
                 ),
               ),
-              SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
-              Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _scanBarcode,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: Size(double.infinity, isTablet ? AppSizes.buttonSizeTablet : AppSizes.buttonSize),
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.buttonBorderRadius),
-                      ),
-                      elevation: AppSizes.buttonElevation,
-                    ),
-                    child: _loading
-                        ? CircularProgressIndicator(color: AppColors.white)
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.camera_alt, color: AppColors.white, size: access.iconSize),
-                              SizedBox(width: isTablet ? AppSizes.spacingMedium : AppSizes.spacingSmall),
-                              Text(
-                                AppText.startScanBarcode,
-                                style: AppStyles.button.copyWith(color: AppColors.white, fontSize: access.fontSize),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              ),
-              SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
+              SizedBox(height: isTablet ? 32 : 20),
               if (_barcode != null)
                 Container(
                   padding: EdgeInsets.all(AppSizes.spacingMedium),
@@ -230,7 +222,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                       SizedBox(width: AppSizes.spacingSmall),
                       Text(
                         '${AppText.barcodeLabel}: $_barcode',
-                        style: AppStyles.body.copyWith(fontWeight: FontWeight.w500, fontSize: access.fontSize),
+                        style: AppStyles.body(context),
                       ),
                     ],
                   ),
@@ -251,12 +243,43 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                       Expanded(
                         child: Text(
                           _error!,
-                          style: AppStyles.body.copyWith(color: AppColors.error),
+                          style: AppStyles.body(context),
                         ),
                       ),
                     ],
                   ),
                 ),
+              SizedBox(height: isTablet ? 24 : 16),
+              Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ScanOCRScreen()));
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size(double.infinity, isTablet ? AppSizes.buttonSizeTablet : AppSizes.buttonSize),
+                      backgroundColor: AppColors.secondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.buttonBorderRadius),
+                      ),
+                      elevation: AppSizes.buttonElevation,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.document_scanner, color: AppColors.white, size: access.iconSize),
+                        SizedBox(width: isTablet ? AppSizes.spacingMedium : AppSizes.spacingSmall),
+                        Text(
+                          'Scan Komposisi',
+                          style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: AppColors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: isTablet ? 24 : 16),
               if (_product != null)
                 Expanded(
                   child: SingleChildScrollView(
@@ -291,7 +314,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                                 ),
                                 child: Text(
                                   _getOverallStatus().toUpperCase(),
-                                  style: AppStyles.button.copyWith(
+                                  style: AppStyles.body(context).copyWith(
                                     color: _getOverallStatusColor(),
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -302,7 +325,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                           SizedBox(height: AppSizes.spacingMedium),
                           Text(
                             _product!.name,
-                            style: AppStyles.heading,
+                            style: AppStyles.heading(context),
                           ),
                           SizedBox(height: AppSizes.spacingLarge),
                           _buildInfoRow(AppText.certificateNumber, _product!.certificateNumber),
@@ -310,25 +333,21 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                           SizedBox(height: AppSizes.spacingMedium),
                           Text(
                             AppText.compositionAnalysis,
-                            style: AppStyles.subheading,
+                            style: AppStyles.subheading(context),
                           ),
                           SizedBox(height: AppSizes.spacingSmall),
-                          
                           if (_compositionAnalysis['haram']?.isNotEmpty == true) ...[
                             _buildCompositionSection(AppText.haramIngredients, _compositionAnalysis['haram']!, AppColors.error),
                             SizedBox(height: AppSizes.spacingSmall),
                           ],
-                          
                           if (_compositionAnalysis['meragukan']?.isNotEmpty == true) ...[
                             _buildCompositionSection(AppText.meragukanIngredients, _compositionAnalysis['meragukan']!, AppColors.warning),
                             SizedBox(height: AppSizes.spacingSmall),
                           ],
-                          
                           if (_compositionAnalysis['unknown']?.isNotEmpty == true) ...[
                             _buildCompositionSection(AppText.unknownIngredients, _compositionAnalysis['unknown']!, AppColors.grey),
                             SizedBox(height: AppSizes.spacingSmall),
                           ],
-                          
                           if (_compositionAnalysis['halal']?.isNotEmpty == true) ...[
                             _buildCompositionSection(AppText.halalIngredients, _compositionAnalysis['halal']!, AppColors.success),
                           ],
@@ -354,7 +373,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
             width: 120,
             child: Text(
               label,
-              style: AppStyles.body.copyWith(
+              style: AppStyles.body(context).copyWith(
                 color: AppColors.grey,
                 fontWeight: FontWeight.w500,
               ),
@@ -363,7 +382,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
           Expanded(
             child: Text(
               value,
-              style: AppStyles.body.copyWith(fontWeight: FontWeight.w500),
+              style: AppStyles.body(context).copyWith(fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -388,12 +407,12 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                 title.contains('Haram') ? Icons.warning : 
                 title.contains('Meragukan') || title.contains('Tidak Dikenal') ? Icons.help_outline : Icons.check_circle,
                 color: color,
-                size: AppSizes.iconSizeSmall,
+                size: AppIconSizes.size(context),
               ),
               SizedBox(width: AppSizes.spacingXSmall),
               Text(
                 title,
-                style: AppStyles.body.copyWith(
+                style: AppStyles.body(context).copyWith(
                   color: color,
                   fontWeight: FontWeight.bold,
                 ),
@@ -414,7 +433,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                 Expanded(
                   child: Text(
                     ingredient.name,
-                    style: AppStyles.body.copyWith(
+                    style: AppStyles.body(context).copyWith(
                       color: color.withOpacity(0.8),
                     ),
                   ),
