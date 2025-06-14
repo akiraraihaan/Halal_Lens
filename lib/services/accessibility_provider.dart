@@ -4,9 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AccessibilityProvider extends ChangeNotifier {
   double _fontSize = 16;
   double _iconSize = 24;
+  bool _isColorBlindMode = false;
 
   double get fontSize => _fontSize;
   double get iconSize => _iconSize;
+  bool get isColorBlindMode => _isColorBlindMode;
 
   AccessibilityProvider() {
     _load();
@@ -16,6 +18,7 @@ class AccessibilityProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _fontSize = prefs.getDouble('access_fontSize') ?? 16;
     _iconSize = prefs.getDouble('access_iconSize') ?? 24;
+    _isColorBlindMode = prefs.getBool('access_colorBlindMode') ?? false;
     notifyListeners();
   }
 
@@ -30,6 +33,13 @@ class AccessibilityProvider extends ChangeNotifier {
     _iconSize = v;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('access_iconSize', v);
+    notifyListeners();
+  }
+  
+  Future<void> setColorBlindMode(bool enabled) async {
+    _isColorBlindMode = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('access_colorBlindMode', enabled);
     notifyListeners();
   }
 }

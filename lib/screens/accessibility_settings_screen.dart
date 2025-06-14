@@ -31,7 +31,10 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
   late double _iconSize;
   late double _pendingFontSize;
   late double _pendingIconSize;
+  late bool _isColorBlindMode;
+  late bool _pendingColorBlindMode;
   bool _changed = false;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +43,8 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
     _iconSize = _iconSizeOptions.first;
     _pendingFontSize = _fontSizeOptions.first;
     _pendingIconSize = _iconSizeOptions.first;
+    _isColorBlindMode = false;
+    _pendingColorBlindMode = false;
     _loadSettings();
   }
 
@@ -47,6 +52,7 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
     final prefs = await SharedPreferences.getInstance();
     double savedFontSize = prefs.getDouble('access_fontSize') ?? _fontSizeOptions.first;
     double savedIconSize = prefs.getDouble('access_iconSize') ?? _iconSizeOptions.first;
+    bool savedColorBlindMode = prefs.getBool('access_colorBlindMode') ?? false;
     
     // Cari opsi yang tersedia, jika tidak ada gunakan nilai default
     setState(() {
@@ -60,6 +66,9 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
         _pendingIconSize = savedIconSize;
       }
       
+      _isColorBlindMode = savedColorBlindMode;
+      _pendingColorBlindMode = savedColorBlindMode;
+      
       _changed = false;
     });
   }
@@ -68,190 +77,282 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('access_fontSize', _pendingFontSize);
     await prefs.setDouble('access_iconSize', _pendingIconSize);
+    await prefs.setBool('access_colorBlindMode', _pendingColorBlindMode);
+    
     setState(() {
       _fontSize = _pendingFontSize;
       _iconSize = _pendingIconSize;
+      _isColorBlindMode = _pendingColorBlindMode;
       _changed = false;
     });
+    
     // ignore: use_build_context_synchronously
     final access = Provider.of<AccessibilityProvider>(context, listen: false);
     await access.setFontSize(_pendingFontSize);
     await access.setIconSize(_pendingIconSize);
+    await access.setColorBlindMode(_pendingColorBlindMode);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get current color blind mode from provider to preview changes
+    final access = Provider.of<AccessibilityProvider>(context);
+    final isMonochromeMode = access.isColorBlindMode;
+    
+    // Use the correct background color based on mode
+    final backgroundColor = isMonochromeMode ? 
+      AppColors.backgroundMonochrome : AppColors.background;
+    final textColor = isMonochromeMode ? 
+      AppColors.textPrimaryMonochrome : AppColors.textPrimary;
+    
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: backgroundColor,
         elevation: 0,
         title: Padding(
           padding: const EdgeInsets.only(top: AppSizes.spacingSmall),
           child: Text(
             'Accessibility Settings',
-            style: AppStyles.heading.copyWith(fontSize: AppSizes.fontSizeLarge),
+            style: AppStyles.heading.copyWith(
+              fontSize: AppSizes.fontSizeLarge,
+              color: textColor,
+            ),
           ),
         ),
         centerTitle: false,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSizes.spacingLarge),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.spacingMedium,
+            vertical: AppSizes.spacingSmall,
+          ),
+          child: ListView(
+            children: [
+              const Text('Ukuran Font', style: TextStyle(fontWeight: FontWeight.bold)),
+              RadioListTile<double>(
+                title: Text('Small', style: TextStyle(color: textColor)),
+                value: AppSizes.fontSizeSmall,
+                groupValue: _pendingFontSize,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _pendingFontSize = value;
+                      _changed = _pendingFontSize != _fontSize || 
+                                _pendingIconSize != _iconSize || 
+                                _pendingColorBlindMode != _isColorBlindMode;
+                    });
+                  }
+                },
+              ),
+              RadioListTile<double>(
+                title: Text('Medium', style: TextStyle(color: textColor)),
+                value: AppSizes.fontSizeMedium,
+                groupValue: _pendingFontSize,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _pendingFontSize = value;
+                      _changed = _pendingFontSize != _fontSize || 
+                                _pendingIconSize != _iconSize || 
+                                _pendingColorBlindMode != _isColorBlindMode;
+                    });
+                  }
+                },
+              ),
+              RadioListTile<double>(
+                title: Text('Large', style: TextStyle(color: textColor)),
+                value: AppSizes.fontSizeLarge,
+                groupValue: _pendingFontSize,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _pendingFontSize = value;
+                      _changed = _pendingFontSize != _fontSize || 
+                                _pendingIconSize != _iconSize || 
+                                _pendingColorBlindMode != _isColorBlindMode;
+                    });
+                  }
+                },
+              ),
+              RadioListTile<double>(
+                title: Text('X-Large', style: TextStyle(color: textColor)),
+                value: AppSizes.fontSizeXLarge,
+                groupValue: _pendingFontSize,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _pendingFontSize = value;
+                      _changed = _pendingFontSize != _fontSize || 
+                                _pendingIconSize != _iconSize || 
+                                _pendingColorBlindMode != _isColorBlindMode;
+                    });
+                  }
+                },
+              ),
+              
+              // Contoh teks
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Text(
+                  'Contoh teks dengan ukuran pilihan',
+                  style: TextStyle(fontSize: _pendingFontSize, color: textColor),
                 ),
-                child: IntrinsicHeight(
+              ),
+              
+              const SizedBox(height: AppSizes.spacingMedium),
+              Text('Ukuran Icon', style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+              
+              RadioListTile<double>(
+                title: Text('Small', style: TextStyle(color: textColor)),
+                value: AppSizes.iconSizeSmall,
+                groupValue: _pendingIconSize,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _pendingIconSize = value;
+                      _changed = _pendingFontSize != _fontSize || 
+                                _pendingIconSize != _iconSize || 
+                                _pendingColorBlindMode != _isColorBlindMode;
+                    });
+                  }
+                },
+              ),
+              RadioListTile<double>(
+                title: Text('Normal', style: TextStyle(color: textColor)),
+                value: AppSizes.iconSize,
+                groupValue: _pendingIconSize,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _pendingIconSize = value;
+                      _changed = _pendingFontSize != _fontSize || 
+                                _pendingIconSize != _iconSize || 
+                                _pendingColorBlindMode != _isColorBlindMode;
+                    });
+                  }
+                },
+              ),
+              RadioListTile<double>(
+                title: Text('Large', style: TextStyle(color: textColor)),
+                value: AppSizes.iconSizeTablet,
+                groupValue: _pendingIconSize,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _pendingIconSize = value;
+                      _changed = _pendingFontSize != _fontSize || 
+                                _pendingIconSize != _iconSize || 
+                                _pendingColorBlindMode != _isColorBlindMode;
+                    });
+                  }
+                },
+              ),
+              
+              // Contoh ikon
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.visibility, size: _pendingIconSize, color: textColor),
+                    const SizedBox(width: 12),
+                    Icon(Icons.accessibility, size: _pendingIconSize, color: textColor),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: AppSizes.spacingMedium),
+              Text('Mode Buta Warna', 
+                style: TextStyle(fontWeight: FontWeight.bold, color: textColor)
+              ),
+              SwitchListTile(
+                title: Text('Aktifkan Mode Monokrom', style: TextStyle(color: textColor)),
+                subtitle: Text(
+                  'Mengubah tampilan warna aplikasi menjadi hitam putih', 
+                  style: TextStyle(color: textColor.withOpacity(0.7)),
+                ),
+                value: _pendingColorBlindMode,
+                onChanged: (value) {
+                  setState(() {
+                    _pendingColorBlindMode = value;
+                    _changed = _pendingFontSize != _fontSize || 
+                              _pendingIconSize != _iconSize || 
+                              _pendingColorBlindMode != _isColorBlindMode;
+                  });
+                },
+                activeColor: isMonochromeMode ? AppColors.primaryMonochrome : AppColors.primary,
+              ),
+              
+              const SizedBox(height: AppSizes.spacingMedium),
+              // Preview mode buta warna
+              if (_pendingColorBlindMode != _isColorBlindMode)
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.spacingMedium),
+                  decoration: BoxDecoration(
+                    color: _pendingColorBlindMode ? 
+                      AppColors.backgroundMonochrome : AppColors.background,
+                    borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
+                    border: Border.all(
+                      color: _pendingColorBlindMode ? 
+                        AppColors.secondaryMonochrome : AppColors.secondary,
+                      width: 1,
+                    ),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [                      const Text('Ukuran Font', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RadioListTile<double>(
-                            title: Text('Small'),
-                            value: AppSizes.fontSizeSmall,
-                            groupValue: _pendingFontSize,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingFontSize = value;
-                                  _changed = _pendingFontSize != _fontSize || _pendingIconSize != _iconSize;
-                                });
-                              }
-                            },
-                          ),
-                          RadioListTile<double>(
-                            title: Text('Medium'),
-                            value: AppSizes.fontSizeMedium,
-                            groupValue: _pendingFontSize,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingFontSize = value;
-                                  _changed = _pendingFontSize != _fontSize || _pendingIconSize != _iconSize;
-                                });
-                              }
-                            },
-                          ),
-                          RadioListTile<double>(
-                            title: Text('Large'),
-                            value: AppSizes.fontSizeLarge,
-                            groupValue: _pendingFontSize,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingFontSize = value;
-                                  _changed = _pendingFontSize != _fontSize || _pendingIconSize != _iconSize;
-                                });
-                              }
-                            },
-                          ),
-                          RadioListTile<double>(
-                            title: Text('X-Large'),
-                            value: AppSizes.fontSizeXLarge,
-                            groupValue: _pendingFontSize,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingFontSize = value;
-                                  _changed = _pendingFontSize != _fontSize || _pendingIconSize != _iconSize;
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      // Tampilkan contoh teks sesuai ukuran yang dipilih
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        child: Text(
-                          'Contoh teks dengan ukuran pilihan',
-                          style: TextStyle(fontSize: _pendingFontSize),
+                    children: [
+                      Text(
+                        'Preview Mode ${_pendingColorBlindMode ? "Monokrom" : "Normal"}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _pendingColorBlindMode ? 
+                            AppColors.textPrimaryMonochrome : AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: AppSizes.spacingLarge),
-                      const Text('Ukuran Icon', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RadioListTile<double>(
-                            title: Text('Small'),
-                            value: AppSizes.iconSizeSmall,
-                            groupValue: _pendingIconSize,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingIconSize = value;
-                                  _changed = _pendingFontSize != _fontSize || _pendingIconSize != _iconSize;
-                                });
-                              }
-                            },
-                          ),
-                          RadioListTile<double>(
-                            title: Text('Normal'),
-                            value: AppSizes.iconSize,
-                            groupValue: _pendingIconSize,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingIconSize = value;
-                                  _changed = _pendingFontSize != _fontSize || _pendingIconSize != _iconSize;
-                                });
-                              }
-                            },
-                          ),
-                          RadioListTile<double>(
-                            title: Text('Large'),
-                            value: AppSizes.iconSizeTablet,
-                            groupValue: _pendingIconSize,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingIconSize = value;
-                                  _changed = _pendingFontSize != _fontSize || _pendingIconSize != _iconSize;
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      // Tampilkan contoh ikon sesuai ukuran yang dipilih
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        child: Row(
-                          children: [
-                            Icon(Icons.visibility, size: _pendingIconSize),
-                            const SizedBox(width: 12),
-                            Icon(Icons.accessibility, size: _pendingIconSize),
-                          ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Ini adalah contoh tampilan mode yang dipilih',
+                        style: TextStyle(
+                          color: _pendingColorBlindMode ? 
+                            AppColors.textSecondaryMonochrome : AppColors.textSecondary,
                         ),
                       ),
-                      Row(
-                        children: [
-                          Icon(Icons.visibility, size: _pendingIconSize),
-                          const SizedBox(width: AppSizes.spacingMedium),
-                          Icon(Icons.hearing, size: _pendingIconSize),
-                          const SizedBox(width: AppSizes.spacingMedium),
-                          Icon(Icons.accessibility, size: _pendingIconSize),
-                        ],
-                      ),
-                      const SizedBox(height: AppSizes.spacingXLarge),
-                      ElevatedButton(
-                        onPressed: _changed ? _saveSettings : null,
-                        child: const Text('Simpan', style: AppStyles.button),
-                      ),
-                      const SizedBox(height: AppSizes.spacingMedium),
-                      Text('Pengaturan ini akan diterapkan ke seluruh aplikasi setelah menekan tombol Simpan.', style: AppStyles.body),
                     ],
                   ),
                 ),
+              
+              const SizedBox(height: AppSizes.spacingLarge),
+              Center(
+                child: ElevatedButton(
+                  onPressed: _changed ? _saveSettings : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isMonochromeMode ? 
+                      AppColors.primaryMonochrome : AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.spacingLarge,
+                      vertical: AppSizes.spacingSmall,
+                    ),
+                  ),
+                  child: Text('Simpan', style: AppStyles.button),
+                ),
               ),
-            );
-          },
+              const SizedBox(height: AppSizes.spacingMedium),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  'Pengaturan ini akan diterapkan ke seluruh aplikasi setelah menekan tombol Simpan.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: textColor.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: AppSizes.spacingMedium),
+            ],
+          ),
         ),
       ),
     );

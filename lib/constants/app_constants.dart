@@ -12,6 +12,16 @@ class AppColors {
   static const Color error = Color(0xFFE53935);
   static const Color warning = Color(0xFFFFA000);
   static const Color success = Color(0xFF43A047);
+  
+  // Mode Buta Warna (Monokrom)
+  static const Color primaryMonochrome = Color(0xFF333333); // Dark Grey
+  static const Color secondaryMonochrome = Color(0xFF666666); // Medium Grey
+  static const Color backgroundMonochrome = Color(0xFFF5F5F5); // Light Grey
+  static const Color textPrimaryMonochrome = Color(0xFF333333); // Dark Grey
+  static const Color textSecondaryMonochrome = Color(0xFF666666); // Medium Grey
+  static const Color errorMonochrome = Color(0xFF333333); // Dark Grey
+  static const Color warningMonochrome = Color(0xFF666666); // Medium Grey
+  static const Color successMonochrome = Color(0xFF333333); // Dark Grey
 }
 
 class AppText {
