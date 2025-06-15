@@ -11,12 +11,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Add options: DefaultFirebaseOptions.currentPlatform jika pakai firebase_options.dart
   
-  // Uncomment the line below to run data migration once
-  // await DataMigrationService.runFullMigration();
+  // Run data migration
+  await DataMigrationService.runFullMigration();
   
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AccessibilityProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
+      ],
       child: const MyApp(),
     ),
   );

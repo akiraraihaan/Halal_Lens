@@ -4,6 +4,8 @@ class Product {
   final String certificateNumber;
   final DateTime expiredDate;
   final List<String> compositions;
+  final String? brand;
+  final String? imageUrl;
 
   Product({
     required this.barcode,
@@ -11,6 +13,8 @@ class Product {
     required this.certificateNumber,
     required this.expiredDate,
     required this.compositions,
+    this.brand,
+    this.imageUrl,
   });
 
   factory Product.fromFirestore(Map<String, dynamic> data, String documentId) {
@@ -20,6 +24,8 @@ class Product {
       certificateNumber: data['certificate_number'] ?? '',
       expiredDate: _parseExpiredDate(data['expired_date']),
       compositions: List<String>.from(data['compositions'] ?? []),
+      brand: data['brand'] as String?,
+      imageUrl: data['image_url'] as String?,
     );
   }
 
@@ -28,8 +34,10 @@ class Product {
       barcode: barcode,
       name: json['name'] ?? '',
       certificateNumber: json['certificate_number'] ?? '',
-      expiredDate: _parseExpiredDate(json['expired_date']),
+      expiredDate: DateTime.parse(json['expired_date'] as String),
       compositions: List<String>.from(json['compositions'] ?? []),
+      brand: json['brand'] as String?,
+      imageUrl: json['image_url'] as String?,
     );
   }
 
@@ -76,6 +84,18 @@ class Product {
       'certificate_number': certificateNumber,
       'expired_date': expiredDate.toIso8601String(),
       'compositions': compositions,
+      'brand': brand,
+      'image_url': imageUrl,
+    };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'certificate_number': certificateNumber,
+      'expired_date': expiredDate.toIso8601String(),
+      'brand': brand,
+      'image_url': imageUrl,
     };
   }
 }

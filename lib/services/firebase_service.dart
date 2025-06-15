@@ -64,38 +64,38 @@ class FirebaseService {
   }
 
   // Check compositions against ingredient database
-  static Future<Map<String, List<Ingredient>>> checkCompositions(List<String> compositions) async {
-    List<Ingredient> allIngredients = await getAllIngredients();
-    
+  static Future<Map<String, List<Ingredient>>> checkCompositions(List<String> ingredients) async {
     Map<String, List<Ingredient>> result = {
       'halal': [],
       'haram': [],
-      'meragukan': [],
+      'syubhat': [],
       'unknown': []
     };
-    
-    for (String composition in compositions) {
-      bool found = false;
-      for (Ingredient ingredient in allIngredients) {
-        if (ingredient.matchesText(composition)) {
-          result[ingredient.status]?.add(ingredient);
-          found = true;
-          break;
-        }
-      }
+
+    for (String ingredient in ingredients) {
+      final doc = await _firestore.collection('ingredients').doc(ingredient.toLowerCase()).get();
       
-      if (!found) {
-        // Create unknown ingredient
-        Ingredient unknown = Ingredient(
-          name: composition,
-          status: 'unknown',
-          description: 'Bahan tidak dikenal dalam database',
-          justification: 'Perlu penelitian lebih lanjut',
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = data['status'] as String;
+        final ingredientObj = Ingredient(
+          name: ingredient,
+          status: status,
+          description: data['description'] as String? ?? '',
+          justification: data['justification'] as String? ?? 'Berdasarkan database halal',
         );
-        result['unknown']?.add(unknown);
+        
+        result[status]?.add(ingredientObj);
+      } else {
+        result['unknown']?.add(Ingredient(
+          name: ingredient,
+          status: 'unknown',
+          description: 'Bahan tidak ditemukan dalam database',
+          justification: 'Perlu penelitian lebih lanjut',
+        ));
       }
     }
-    
+
     return result;
   }
   

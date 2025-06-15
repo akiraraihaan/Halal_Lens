@@ -32,13 +32,14 @@ dependencies:
     sdk: flutter
   cloud_firestore: ^4.13.6
   firebase_core: ^2.24.2
+  google_mlkit_text_recognition: ^0.11.0
   
   # Camera and OCR
   camera: ^0.10.5+9
-  google_mlkit_text_recognition: ^0.15.0
   
   # Barcode scanner
   barcode_scan2: ^4.2.4
+  mobile_scanner: ^3.5.6
   
   # Text to Speech
   flutter_tts: ^3.8.5
@@ -47,6 +48,7 @@ dependencies:
   
   # Local storage
   shared_preferences: ^2.2.2
+  uuid: ^4.3.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

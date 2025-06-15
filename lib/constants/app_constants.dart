@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/accessibility_provider.dart';
+import 'text_constants.dart';
 
 class AppColors {
   static const Color primary = Color.fromRGBO(22, 97, 56, 1); // Green
@@ -24,54 +25,30 @@ class AppColors {
   static const Color errorMonochrome = Color(0xFF333333); // Dark Grey
   static const Color warningMonochrome = Color(0xFF666666); // Medium Grey
   static const Color successMonochrome = Color(0xFF333333); // Dark Grey
-}
 
-class AppText {
-  static const String appName = 'Halal Lens';
-  static const String welcomeMessage = 'Selamat Datang';
-  static const String welcomeSubtitle = 'Pindai produk untuk memastikan kehalalannya';
-  
-  // Feature Cards
-  static const String scanBarcodeTitle = 'Scan Barcode';
-  static const String scanBarcodeSubtitle = 'Pindai barcode produk untuk memeriksa kehalalan';
-  static const String scanCompositionTitle = 'Scan Komposisi';
-  static const String scanCompositionSubtitle = 'Pindai komposisi produk menggunakan OCR';
-  
-  // Scan Barcode Screen
-  static const String barcodeNotFound = 'Barcode tidak terdeteksi.';
-  static const String productNotFound = 'Produk tidak ditemukan dalam database.';
-  static const String scanError = 'Gagal scan barcode.';
-  static const String startScanBarcode = 'Mulai Scan Barcode';
-  static const String barcodeLabel = 'Barcode';
-  static const String certificateNumber = 'No. Sertifikat';
-  static const String expiredDate = 'Tanggal Expired';
-  static const String compositionAnalysis = 'Analisis Komposisi';
-  static const String haramIngredients = 'Bahan Haram';
-  static const String meragukanIngredients = 'Bahan Meragukan';
-  static const String unknownIngredients = 'Bahan Tidak Dikenal';
-  static const String halalIngredients = 'Bahan Halal';
-  
-  // Status
-  static const String statusUnknown = 'Tidak Diketahui';
-  static const String statusHaram = 'Haram';
-  static const String statusMeragukan = 'Meragukan';
-  static const String statusHalal = 'Halal';
+  // Status Colors
+  static const Color halal = Color(0xFF4CAF50);
+  static const Color haram = Color(0xFFF44336);
+  static const Color syubhat = Color(0xFFFFC107);
 }
 
 class AppSizes {
   // Button Sizes
   static const double buttonSize = 160.0;
   static const double buttonSizeTablet = 160.0;
+  static const double buttonHeight = 60.0;
+  static const double buttonHeightLarge = 70.0;
   
   // Icon Sizes
-  static const double iconSize = 40.0;
-  static const double iconSizeTablet = 48.0;
+  static const double iconSizeSmall = 28.0;
+  static const double iconSize = 32.0;
+  static const double iconSizeTablet = 40.0;
   
   // Font Sizes
-  static const double fontSizeSmall = 14.0;
-  static const double fontSizeMedium = 16.0;
-  static const double fontSizeLarge = 20.0;
-  static const double fontSizeXLarge = 24.0;
+  static const double fontSizeSmall = 10.0;
+  static const double fontSizeMedium = 14.0;
+  static const double fontSizeLarge = 18.0;
+  static const double fontSizeXLarge = 22.0;
   
   // Spacing
   static const double spacingSmall = 8.0;
@@ -88,41 +65,97 @@ class AppSizes {
   static const double buttonBorderRadius = 20.0;
   static const double buttonElevation = 2.0;
   static const double spacingXSmall = 4.0;
-  static const double iconSizeSmall = 20.0;
+}
+
+class AppTextSizes {
+  // Base sizes for different text types
+  static const double headingSmall = 16.0;
+  static const double headingMedium = 20.0;
+  static const double headingLarge = 24.0;
+  static const double headingXLarge = 28.0;
+
+  static const double titleSmall = 14.0;
+  static const double titleMedium = 18.0;
+  static const double titleLarge = 22.0;
+  static const double titleXLarge = 26.0;
+
+  static const double subtitleSmall = 12.0;
+  static const double subtitleMedium = 16.0;
+  static const double subtitleLarge = 20.0;
+  static const double subtitleXLarge = 24.0;
+
+  static const double bodySmall = 10.0;
+  static const double bodyMedium = 14.0;
+  static const double bodyLarge = 18.0;
+  static const double bodyXLarge = 22.0;
+
+  // Get text size based on accessibility setting
+  static double getTextSize(BuildContext context, double baseSize) {
+    final access = Provider.of<AccessibilityProvider>(context, listen: false);
+    switch (access.textSize) {
+      case 'kecil':
+        return baseSize * 0.8;
+      case 'sedang':
+        return baseSize;
+      case 'besar':
+        return baseSize * 1.2;
+      case 'sangat_besar':
+        return baseSize * 1.4;
+      default:
+        return baseSize;
+    }
+  }
 }
 
 class AppStyles {
+
   static TextStyle heading(BuildContext context) {
-    final access = Provider.of<AccessibilityProvider>(context, listen: false);
     return TextStyle(
-      fontSize: access.fontSize * 1.5,
+      fontSize: AppTextSizes.getTextSize(context, AppTextSizes.headingMedium),
+      fontWeight: FontWeight.w800,
+      color: AppColors.textPrimary,
+      letterSpacing: -0.5,
+    );
+  }
+
+  static TextStyle title(BuildContext context) {
+    return TextStyle(
+      fontSize: AppTextSizes.getTextSize(context, AppTextSizes.titleMedium),
       fontWeight: FontWeight.w800,
       color: AppColors.textPrimary,
       letterSpacing: -0.5,
     );
   }
   
-  static TextStyle subheading(BuildContext context) {
-    final access = Provider.of<AccessibilityProvider>(context, listen: false);
+  static TextStyle subtitle(BuildContext context) {
     return TextStyle(
-      fontSize: access.fontSize,
+      fontSize: AppTextSizes.getTextSize(context, AppTextSizes.subtitleMedium),
       color: AppColors.textSecondary,
       height: 1.4,
     );
   }
   
   static TextStyle body(BuildContext context) {
-    final access = Provider.of<AccessibilityProvider>(context, listen: false);
     return TextStyle(
-      fontSize: access.fontSize,
+      fontSize: AppTextSizes.getTextSize(context, AppTextSizes.bodyMedium),
       color: AppColors.textPrimary,
     );
   }
 
-  static const TextStyle button = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-  );
+  static TextStyle button(BuildContext context) {
+    return TextStyle(
+      fontSize: AppTextSizes.getTextSize(context, AppTextSizes.bodyMedium),
+      fontWeight: FontWeight.w600,
+    );
+  }
+
+  static TextStyle caption(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width > 600;
+    return TextStyle(
+      fontSize: isTablet ? 14 : 12,
+      fontWeight: FontWeight.normal,
+    );
+  }
 }
 
 class AppIconSizes {

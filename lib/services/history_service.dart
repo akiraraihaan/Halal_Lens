@@ -6,61 +6,43 @@ class HistoryService {
   static const String _historyKey = 'scan_history';
 
   static Future<List<ScanHistory>> getScanHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final historyJson = prefs.getStringList(_historyKey) ?? [];
-      
-      return historyJson.map((item) {
-        final map = json.decode(item) as Map<String, dynamic>;
-        return ScanHistory.fromMap(map);
-      }).toList()
-        ..sort((a, b) => b.scanDate.compareTo(a.scanDate)); // Sort by newest first
-    } catch (e) {
-      print('Error loading scan history: $e');
-      return [];
-    }
+    final prefs = await SharedPreferences.getInstance();
+    final String? historyJson = prefs.getString(_historyKey);
+    
+    if (historyJson == null) return [];
+    
+    final List<dynamic> historyList = json.decode(historyJson);
+    return historyList.map((item) => ScanHistory.fromJson(item)).toList();
   }
 
   static Future<void> addScanHistory(ScanHistory history) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final currentHistory = await getScanHistory();
-      
-      // Add new history at the beginning
-      currentHistory.insert(0, history);
-      
-      // Keep only last 50 items
-      if (currentHistory.length > 50) {
-        currentHistory.removeRange(50, currentHistory.length);
-      }
-      
-      final historyJson = currentHistory.map((item) => json.encode(item.toMap())).toList();
-      await prefs.setStringList(_historyKey, historyJson);
-    } catch (e) {
-      print('Error saving scan history: $e');
+    final prefs = await SharedPreferences.getInstance();
+    final List<ScanHistory> currentHistory = await getScanHistory();
+    
+    // Add new history at the beginning
+    currentHistory.insert(0, history);
+    
+    // Keep only last 50 items
+    if (currentHistory.length > 50) {
+      currentHistory.removeLast();
     }
-  }
-
-  static Future<void> clearHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_historyKey);
-    } catch (e) {
-      print('Error clearing scan history: $e');
-    }
+    
+    final String historyJson = json.encode(currentHistory.map((h) => h.toJson()).toList());
+    await prefs.setString(_historyKey, historyJson);
   }
 
   static Future<void> deleteScanHistory(String id) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final currentHistory = await getScanHistory();
-      
-      currentHistory.removeWhere((item) => item.id == id);
-      
-      final historyJson = currentHistory.map((item) => json.encode(item.toMap())).toList();
-      await prefs.setStringList(_historyKey, historyJson);
-    } catch (e) {
-      print('Error deleting scan history: $e');
-    }
+    final prefs = await SharedPreferences.getInstance();
+    final List<ScanHistory> currentHistory = await getScanHistory();
+    
+    currentHistory.removeWhere((item) => item.id == id);
+    
+    final String historyJson = json.encode(currentHistory.map((h) => h.toJson()).toList());
+    await prefs.setString(_historyKey, historyJson);
+  }
+
+  static Future<void> clearHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_historyKey);
   }
 }

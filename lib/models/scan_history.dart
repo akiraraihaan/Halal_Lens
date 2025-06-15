@@ -1,50 +1,52 @@
+import 'package:uuid/uuid.dart';
+
 class ScanHistory {
   final String id;
   final String productName;
   final String? barcode;
+  final String scanType;
+  final String overallStatus;
   final List<String> compositions;
-  final String overallStatus; // 'halal', 'haram', 'meragukan'
   final DateTime scanDate;
-  final String scanType; // 'barcode' or 'ocr'
   final Map<String, List<String>> compositionAnalysis;
 
   ScanHistory({
-    required this.id,
+    String? id,
     required this.productName,
     this.barcode,
-    required this.compositions,
-    required this.overallStatus,
-    required this.scanDate,
     required this.scanType,
+    required this.overallStatus,
+    required this.compositions,
+    required this.scanDate,
     required this.compositionAnalysis,
-  });
+  }) : id = id ?? const Uuid().v4();
 
-  Map<String, dynamic> toMap() {
+  factory ScanHistory.fromJson(Map<String, dynamic> json) {
+    return ScanHistory(
+      id: json['id'] as String,
+      productName: json['productName'] as String,
+      barcode: json['barcode'] as String?,
+      scanType: json['scanType'] as String,
+      overallStatus: json['overallStatus'] as String,
+      compositions: List<String>.from(json['compositions'] as List),
+      scanDate: DateTime.parse(json['scanDate'] as String),
+      compositionAnalysis: Map<String, List<String>>.from(
+        json['compositionAnalysis']?.map((key, value) => 
+          MapEntry(key, List<String>.from(value))) ?? {}
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'productName': productName,
       'barcode': barcode,
-      'compositions': compositions,
-      'overallStatus': overallStatus,
-      'scanDate': scanDate.millisecondsSinceEpoch,
       'scanType': scanType,
+      'overallStatus': overallStatus,
+      'compositions': compositions,
+      'scanDate': scanDate.toIso8601String(),
       'compositionAnalysis': compositionAnalysis,
     };
-  }
-
-  factory ScanHistory.fromMap(Map<String, dynamic> map) {
-    return ScanHistory(
-      id: map['id'] ?? '',
-      productName: map['productName'] ?? '',
-      barcode: map['barcode'],
-      compositions: List<String>.from(map['compositions'] ?? []),
-      overallStatus: map['overallStatus'] ?? 'unknown',
-      scanDate: DateTime.fromMillisecondsSinceEpoch(map['scanDate'] ?? 0),
-      scanType: map['scanType'] ?? 'barcode',
-      compositionAnalysis: Map<String, List<String>>.from(
-        map['compositionAnalysis']?.map((key, value) => 
-          MapEntry(key, List<String>.from(value))) ?? {}
-      ),
-    );
   }
 }

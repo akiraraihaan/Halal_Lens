@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
+import '../constants/text_constants.dart';
 import '../services/accessibility_provider.dart';
 
 class AccessibilitySettingsScreen extends StatefulWidget {
@@ -13,21 +14,16 @@ class AccessibilitySettingsScreen extends StatefulWidget {
 }
 
 class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScreen> with SingleTickerProviderStateMixin {
-  final List<double> _fontSizeOptions = [
-    AppSizes.fontSizeSmall,
-    AppSizes.fontSizeMedium,
-    AppSizes.fontSizeLarge,
-    AppSizes.fontSizeXLarge,
-  ];
+  final List<String> _textSizeOptions = ['kecil', 'sedang', 'besar', 'sangat_besar'];
   final List<double> _iconSizeOptions = [
     AppSizes.iconSizeSmall,
     AppSizes.iconSize,
     AppSizes.iconSizeTablet,
   ];
   
-  late double _fontSize;
+  late String _textSize;
   late double _iconSize;
-  late double _pendingFontSize;
+  late String _pendingTextSize;
   late double _pendingIconSize;
   late bool _isColorBlindMode;
   late bool _pendingColorBlindMode;
@@ -37,10 +33,10 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
   @override
   void initState() {
     super.initState();
-    _fontSize = _fontSizeOptions.first;
-    _iconSize = _iconSizeOptions.first;
-    _pendingFontSize = _fontSizeOptions.first;
-    _pendingIconSize = _iconSizeOptions.first;
+    _textSize = _textSizeOptions[1]; // Default to 'sedang'
+    _iconSize = _iconSizeOptions[1]; // Default to medium
+    _pendingTextSize = _textSizeOptions[1];
+    _pendingIconSize = _iconSizeOptions[1];
     _isColorBlindMode = false;
     _pendingColorBlindMode = false;
     
@@ -68,14 +64,14 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    double savedFontSize = prefs.getDouble('access_fontSize') ?? _fontSizeOptions.first;
-    double savedIconSize = prefs.getDouble('access_iconSize') ?? _iconSizeOptions.first;
+    String savedTextSize = prefs.getString('access_textSize') ?? _textSizeOptions[1];
+    double savedIconSize = prefs.getDouble('access_iconSize') ?? _iconSizeOptions[1];
     bool savedColorBlindMode = prefs.getBool('access_colorBlindMode') ?? false;
     
     setState(() {
-      if (_fontSizeOptions.contains(savedFontSize)) {
-        _fontSize = savedFontSize;
-        _pendingFontSize = savedFontSize;
+      if (_textSizeOptions.contains(savedTextSize)) {
+        _textSize = savedTextSize;
+        _pendingTextSize = savedTextSize;
       }
       
       if (_iconSizeOptions.contains(savedIconSize)) {
@@ -90,16 +86,16 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
 
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('access_fontSize', _pendingFontSize);
+    await prefs.setString('access_textSize', _pendingTextSize);
     await prefs.setDouble('access_iconSize', _pendingIconSize);
     
     setState(() {
-      _fontSize = _pendingFontSize;
+      _textSize = _pendingTextSize;
       _iconSize = _pendingIconSize;
     });
     
     final access = Provider.of<AccessibilityProvider>(context, listen: false);
-    await access.setFontSize(_pendingFontSize);
+    await access.setTextSize(_pendingTextSize);
     await access.setIconSize(_pendingIconSize);
     final isMonochromeMode = access.isColorBlindMode;
     
@@ -109,30 +105,38 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
         content: Row(
           children: [
             Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Pengaturan berhasil disimpan'),
+            SizedBox(width: AppSizes.spacingSmall),
+            Text(AppText.settingsSaved),
           ],
         ),
         backgroundColor: isMonochromeMode ? AppColors.successMonochrome : AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppSizes.borderRadiusSmall),
         ),
       ),
     );
   }
 
-  String _getFontSizeLabel(double size) {
-    if (size == AppSizes.fontSizeSmall) return 'Kecil';
-    if (size == AppSizes.fontSizeMedium) return 'Sedang';
-    if (size == AppSizes.fontSizeLarge) return 'Besar';
-    return 'Sangat Besar';
+  String _getTextSizeLabel(String size) {
+    switch (size) {
+      case 'kecil':
+        return AppText.textSizeSmall;
+      case 'sedang':
+        return AppText.textSizeMedium;
+      case 'besar':
+        return AppText.textSizeLarge;
+      case 'sangat_besar':
+        return AppText.textSizeXLarge;
+      default:
+        return AppText.textSizeMedium;
+    }
   }
 
   String _getIconSizeLabel(double size) {
-    if (size == AppSizes.iconSizeSmall) return 'Kecil';
-    if (size == AppSizes.iconSize) return 'Normal';
-    return 'Besar';
+    if (size == AppSizes.iconSizeSmall) return AppText.textSizeSmall;
+    if (size == AppSizes.iconSize) return AppText.textSizeMedium;
+    return AppText.textSizeLarge;
   }
 
   @override
@@ -148,47 +152,56 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
       AppColors.textPrimaryMonochrome : AppColors.textPrimary;
     final primaryColor = isMonochromeMode ? 
       AppColors.primaryMonochrome : AppColors.primary;
+    final secondaryColor = isMonochromeMode ? 
+      AppColors.secondaryMonochrome : AppColors.secondary;
     
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: backgroundColor,
         elevation: 0,
-        title: Text(
-          'Pengaturan Aksesibilitas',
-          style: AppStyles.heading(context).copyWith(
-            fontSize: AppSizes.fontSizeLarge,
-            color: textColor,
+        toolbarHeight: 80,
+        centerTitle: true,
+        title: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            textAlign: TextAlign.center,
+            AppText.accessibilityTitle,
+            style: AppStyles.heading(context).copyWith(
+              color: textColor,
+            ),
           ),
         ),
-        centerTitle: false,
       ),
       body: SafeArea(
         child: FadeTransition(
           opacity: _animationController.view,
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(isTablet ? 32.0 : 24.0),
+            padding: EdgeInsets.only(
+              left: isTablet ? AppSizes.screenPaddingXLarge : AppSizes.screenPaddingLarge,
+              right: isTablet ? AppSizes.screenPaddingXLarge : AppSizes.screenPaddingLarge,
+              bottom: isTablet ? AppSizes.screenPaddingXLarge : AppSizes.screenPaddingLarge,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
-                SizedBox(height: isTablet ? 32 : 24),
+                SizedBox(height: isTablet ? AppSizes.spacingMedium : AppSizes.spacingSmall),
                 
                 // Mode Buta Warna Section
                 _buildSection(
-                  'Mode Buta Warna',
+                  AppText.colorBlindMode,
                   Icons.visibility,
-                  primaryColor,
+                  secondaryColor,
                   textColor,
                   isTablet,
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
                     ),
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -204,17 +217,14 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                       ),
                       child: SwitchListTile(
                         title: Text(
-                          'Mode Monokrom',
-                          style: TextStyle(
-                            fontSize: isTablet ? 18 : 16,
-                            fontWeight: FontWeight.w600,
+                          AppText.colorBlindMode,
+                          style: AppStyles.title(context).copyWith(
                             color: textColor,
                           ),
                         ),
                         subtitle: Text(
-                          'Mengubah tampilan warna aplikasi menjadi hitam putih',
-                          style: TextStyle(
-                            fontSize: isTablet ? 14 : 12,
+                          AppText.colorBlindModeDescription,
+                          style: AppStyles.subtitle(context).copyWith(
                             color: textColor.withOpacity(0.7),
                           ),
                         ),
@@ -238,24 +248,24 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                   ),
                 ),
                 
-                SizedBox(height: isTablet ? 32 : 24),
+                SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
                 
                 // Ukuran Font Section
                 _buildSection(
-                  'Ukuran Font',
+                  AppText.textSizeTitle,
                   Icons.format_size,
-                  primaryColor,
+                  secondaryColor,
                   textColor,
                   isTablet,
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
                     ),
                     child: Container(
-                      padding: EdgeInsets.all(isTablet ? 24 : 20),
+                      padding: EdgeInsets.all(AppSizes.spacingLarge),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -272,72 +282,101 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          DropdownButtonFormField<double>(
-                            value: _pendingFontSize,
-                            isExpanded: true,
-                            style: AppStyles.body(context),
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide(
-                                  color: primaryColor.withOpacity(0.3),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide(
-                                  color: primaryColor.withOpacity(0.3),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide(
-                                  color: primaryColor,
-                                  width: 2,
-                                ),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                              filled: true,
-                              fillColor: Colors.white.withOpacity(0.9),
+                          Text(
+                            AppText.textSizeDescription,
+                            style: AppStyles.subtitle(context).copyWith(
+                              color: textColor.withOpacity(0.7),
                             ),
-                            items: _fontSizeOptions.map((size) {
-                              return DropdownMenuItem<double>(
-                                value: size,
-                                child: Text(
-                                  _getFontSizeLabel(size),
-                                  style: TextStyle(
-                                    fontSize: size,
-                                    color: textColor,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingFontSize = value;
-                                });
-                              }
-                            },
                           ),
-                          SizedBox(height: 20),
+                          SizedBox(height: AppSizes.spacingMedium),
                           Container(
-                            padding: EdgeInsets.all(16),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSizes.spacingMedium,
+                              vertical: AppSizes.spacingSmall,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(15),
+                              borderRadius: BorderRadius.circular(AppSizes.borderRadiusSmall),
                               border: Border.all(
                                 color: primaryColor.withOpacity(0.3),
                               ),
                             ),
-                            child: Text(
-                              'Contoh teks dengan ukuran pilihan',
-                              style: TextStyle(
-                                fontSize: _pendingFontSize,
-                                color: textColor,
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _pendingTextSize,
+                                isExpanded: true,
+                                icon: Icon(Icons.arrow_drop_down, color: primaryColor),
+                                style: AppStyles.body(context).copyWith(color: textColor),
+                                items: _textSizeOptions.map((size) {
+                                  return DropdownMenuItem<String>(
+                                    value: size,
+                                    child: Text(
+                                      _getTextSizeLabel(size),
+                                      style: AppStyles.body(context).copyWith(
+                                        fontSize: size == 'kecil' ? AppTextSizes.subtitleSmall :
+                                                size == 'sedang' ? AppTextSizes.subtitleMedium :
+                                                size == 'besar' ? AppTextSizes.subtitleLarge :
+                                                AppTextSizes.subtitleXLarge,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _pendingTextSize = value;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: AppSizes.spacingLarge),
+                          Text(
+                            AppText.iconSizeDescription,
+                            style: AppStyles.subtitle(context).copyWith(
+                              color: textColor.withOpacity(0.7),
+                            ),
+                          ),
+                          SizedBox(height: AppSizes.spacingMedium),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSizes.spacingMedium,
+                              vertical: AppSizes.spacingSmall,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(AppSizes.borderRadiusSmall),
+                              border: Border.all(
+                                color: primaryColor.withOpacity(0.3),
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<double>(
+                                value: _pendingIconSize,
+                                isExpanded: true,
+                                icon: Icon(Icons.arrow_drop_down, color: primaryColor),
+                                style: AppStyles.body(context).copyWith(color: textColor),
+                                items: _iconSizeOptions.map((size) {
+                                  return DropdownMenuItem<double>(
+                                    value: size,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.accessibility, size: size, color: textColor),
+                                        SizedBox(width: AppSizes.spacingSmall),
+                                        Text(_getIconSizeLabel(size)),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _pendingIconSize = value;
+                                    });
+                                  }
+                                },
                               ),
                             ),
                           ),
@@ -347,153 +386,33 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                   ),
                 ),
                 
-                SizedBox(height: isTablet ? 32 : 24),
-                
-                // Ukuran Icon Section
-                _buildSection(
-                  'Ukuran Icon',
-                  Icons.photo_size_select_large,
-                  primaryColor,
-                  textColor,
-                  isTablet,
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Container(
-                      padding: EdgeInsets.all(isTablet ? 24 : 20),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            isMonochromeMode ? 
-                              AppColors.backgroundMonochrome : 
-                              AppColors.background,
-                            isMonochromeMode ? 
-                              AppColors.backgroundMonochrome.withOpacity(0.8) : 
-                              AppColors.background.withOpacity(0.8),
-                          ],
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          DropdownButtonFormField<double>(
-                            value: _pendingIconSize,
-                            isExpanded: true,
-                            style: AppStyles.body(context),
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide(
-                                  color: primaryColor.withOpacity(0.3),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide(
-                                  color: primaryColor.withOpacity(0.3),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide(
-                                  color: primaryColor,
-                                  width: 2,
-                                ),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                              filled: true,
-                              fillColor: Colors.white.withOpacity(0.9),
-                            ),
-                            items: _iconSizeOptions.map((size) {
-                              return DropdownMenuItem<double>(
-                                value: size,
-                                child: Text(
-                                  _getIconSizeLabel(size),
-                                  style: TextStyle(
-                                    fontSize: AppSizes.fontSizeMedium,
-                                    color: textColor,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _pendingIconSize = value;
-                                });
-                              }
-                            },
-                          ),
-                          SizedBox(height: 20),
-                          Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: primaryColor.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Icon(Icons.visibility, size: _pendingIconSize, color: textColor),
-                                Icon(Icons.accessibility, size: _pendingIconSize, color: textColor),
-                                Icon(Icons.settings, size: _pendingIconSize, color: textColor),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                
-                SizedBox(height: isTablet ? 32 : 24),
+                SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
                 
                 // Save Button
-                if (_pendingFontSize != _fontSize || _pendingIconSize != _iconSize)
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _saveSettings,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isTablet ? 40 : 32,
-                          vertical: isTablet ? 16 : 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        elevation: 2,
+                Center(
+                  child: ElevatedButton(
+                    onPressed: (_pendingTextSize != _textSize || _pendingIconSize != _iconSize) 
+                      ? _saveSettings 
+                      : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSizes.spacingXLarge,
+                        vertical: AppSizes.spacingMedium,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.save),
-                          SizedBox(width: 8),
-                          Text(
-                            'Simpan Perubahan',
-                            style: TextStyle(
-                              fontSize: isTablet ? 18 : 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
                       ),
+                      disabledBackgroundColor: primaryColor.withOpacity(0.5),
+                      disabledForegroundColor: Colors.white.withOpacity(0.7),
+                    ),
+                    child: Text(
+                      AppText.saveSettings,
+                      style: AppStyles.button(context).copyWith(color: Colors.white),
                     ),
                   ),
-                
-                SizedBox(height: isTablet ? 32 : 24),
+                ),
               ],
             ),
           ),
@@ -515,30 +434,17 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
       children: [
         Row(
           children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: primaryColor,
-                size: isTablet ? 24 : 20,
-              ),
-            ),
-            SizedBox(width: 12),
+            Icon(icon, color: primaryColor, size: AppIconSizes.size(context)),
+            SizedBox(width: AppSizes.spacingSmall),
             Text(
               title,
-              style: TextStyle(
-                fontSize: isTablet ? 20 : 18,
-                fontWeight: FontWeight.bold,
+              style: AppStyles.title(context).copyWith(
                 color: textColor,
               ),
             ),
           ],
         ),
-        SizedBox(height: 16),
+        SizedBox(height: AppSizes.spacingMedium),
         content,
       ],
     );

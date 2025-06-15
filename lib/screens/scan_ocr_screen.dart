@@ -10,6 +10,8 @@ import '../services/accessibility_provider.dart';
 import '../models/ingredient.dart';
 import '../models/scan_history.dart';
 import '../constants/app_constants.dart';
+import '../constants/text_constants.dart';
+import 'ocr_result_screen.dart';
 // import 'package:flutter_tts/flutter_tts.dart'; // Uncomment if using flutter_tts
 
 class ScanOCRScreen extends StatefulWidget {
@@ -25,17 +27,27 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
   bool _loading = false;
   bool _isFlashOn = false;
   String? _error;
+  bool _hasPermission = false;
   List<String> _ingredients = [];
   Map<String, List<Ingredient>> _compositionAnalysis = {};
 
   @override
   void initState() {
     super.initState();
-    _initCamera();
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    final status = await Permission.camera.request();
+    setState(() {
+      _hasPermission = status.isGranted;
+      if (_hasPermission) {
+        _initCamera();
+      }
+    });
   }
 
   Future<void> _initCamera() async {
-    await Permission.camera.request();
     final cameras = await availableCameras();
     if (cameras.isNotEmpty) {
       _cameraController = CameraController(cameras[0], ResolutionPreset.high);
@@ -61,6 +73,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
       // Handle error
     }
   }
+
   Future<void> _scanText() async {
     if (!_isCameraInitialized || _cameraController == null) return;
     setState(() {
@@ -84,7 +97,8 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
           .map((e) => e.trim().toLowerCase())
           .where((e) => e.isNotEmpty)
           .toList();
-        Map<String, List<Ingredient>> analysis = 
+
+      Map<String, List<Ingredient>> analysis = 
           await FirebaseService.checkCompositions(ingredients);
       
       // Save to history
@@ -100,13 +114,17 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
           MapEntry(key, value.map((ingredient) => ingredient.name).toList())),
       );
       await HistoryService.addScanHistory(historyItem);
-      
-      setState(() {
-        _ingredients = ingredients;
-        _compositionAnalysis = analysis;
-        _loading = false;
-      });
-      // TODO: Integrasi TTS di sini
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OCRResultScreen(
+            imagePath: image.path,
+            ingredients: ingredients,
+            compositionAnalysis: analysis,
+          ),
+        ),
+      );
     } catch (e) {
       setState(() {
         _loading = false;
@@ -121,7 +139,9 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
         _compositionAnalysis['unknown']?.isNotEmpty == true) return Colors.orange;
     if (_compositionAnalysis['halal']?.isNotEmpty == true) return Colors.green;
     return Colors.grey;
-  }  String _statusText() {
+  }
+
+  String _statusText() {
     if (_compositionAnalysis['haram']?.isNotEmpty == true) return 'Haram';
     if (_compositionAnalysis['meragukan']?.isNotEmpty == true || 
         _compositionAnalysis['unknown']?.isNotEmpty == true) return 'Meragukan';
@@ -147,242 +167,313 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
     _cameraController?.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final access = Provider.of<AccessibilityProvider>(context);
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
-    
+    final isMonochromeMode = access.isColorBlindMode;
+
+    final backgroundColor = isMonochromeMode ? 
+      AppColors.backgroundMonochrome : AppColors.background;
+    final textColor = isMonochromeMode ? 
+      AppColors.textPrimaryMonochrome : AppColors.textPrimary;
+    final primaryColor = isMonochromeMode ? 
+      AppColors.primaryMonochrome : AppColors.primary;
+    final secondaryColor = isMonochromeMode ? 
+      AppColors.secondaryMonochrome : AppColors.secondary;
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: access.isColorBlindMode ? [
-              AppColors.backgroundMonochrome,
-              AppColors.backgroundMonochrome.withOpacity(0.8),
-            ] : [
-              Colors.blueGrey.shade50,
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(isTablet ? 32.0 : 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.arrow_back, size: access.iconSize),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    SizedBox(width: isTablet ? 12 : 8),
-                    Text(
-                      'Scan Komposisi',
-                      style: AppStyles.heading(context),
-                    ),
-                  ],
-                ),
-                SizedBox(height: isTablet ? 32 : 24),
-                if (_isCameraInitialized)
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
-                      child: Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  spreadRadius: 2,
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: AspectRatio(
-                                aspectRatio: _cameraController!.value.aspectRatio,
-                                child: CameraPreview(_cameraController!),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 16,
-                            right: 16,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: IconButton(
-                                icon: Icon(
-                                  _isFlashOn ? Icons.flash_on : Icons.flash_off,
-                                  color: Colors.white,
-                                ),
-                                onPressed: _toggleFlash,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 16,
-                            left: 0,
-                            right: 0,
-                            child: Center(
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isTablet ? 28 : 24,
-                                  vertical: isTablet ? 16 : 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'Arahkan kamera ke komposisi produk',
-                                  style: AppStyles.body(context),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                SizedBox(height: isTablet ? 32 : 24),
-                Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
-                    child: ElevatedButton(
-                      onPressed: _loading ? null : _scanText,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: Size(double.infinity, isTablet ? 70 : 60),
-                        backgroundColor: Colors.blueGrey,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: _loading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.camera_alt, size: AppIconSizes.size(context)),
-                                SizedBox(width: isTablet ? 12 : 8),
-                                Text(
-                                  'Scan Komposisi',
-                                  style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: AppColors.white),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: isTablet ? 32 : 24),
-                if (_error != null)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline, color: Colors.red, size: AppIconSizes.size(context)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _error!,
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                if (_ingredients.isNotEmpty)
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 16),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              spreadRadius: 5,
-                              blurRadius: 7,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _statusColor().withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    _statusText().toUpperCase(),
-                                    style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: _statusColor()),
-                                  ),
-                                ),
-                              ],
-                            ),                            const SizedBox(height: 20),
-                            const Text(
-                              'Analisis Komposisi:',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            
-                            // Display composition analysis
-                            if (_compositionAnalysis['haram']?.isNotEmpty == true) ...[
-                              _buildCompositionSection('Bahan Haram', _compositionAnalysis['haram']!, Colors.red),
-                              const SizedBox(height: 12),
-                            ],
-                            
-                            if (_compositionAnalysis['meragukan']?.isNotEmpty == true) ...[
-                              _buildCompositionSection('Bahan Meragukan', _compositionAnalysis['meragukan']!, Colors.orange),
-                              const SizedBox(height: 12),
-                            ],
-                            
-                            if (_compositionAnalysis['unknown']?.isNotEmpty == true) ...[
-                              _buildCompositionSection('Bahan Tidak Dikenal', _compositionAnalysis['unknown']!, Colors.grey),
-                              const SizedBox(height: 12),
-                            ],
-                            
-                            if (_compositionAnalysis['halal']?.isNotEmpty == true) ...[
-                              _buildCompositionSection('Bahan Halal', _compositionAnalysis['halal']!, Colors.green),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        toolbarHeight: 80,
+        centerTitle: true,
+        title: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            textAlign: TextAlign.center,
+            AppText.scanCompositionTitle,
+            style: AppStyles.heading(context).copyWith(
+              color: textColor,
             ),
           ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.all(isTablet ? AppSizes.screenPaddingXLarge : AppSizes.screenPaddingLarge),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(height: isTablet ? 32 : 16),
+                      // Camera Container
+                      Container(
+                        width: double.infinity,
+                        height: isTablet ? 400 : 300,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          color: Colors.black,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: !_hasPermission
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.camera_alt, color: Colors.white, size: 64),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        AppText.scanCompositionPermission,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: isTablet ? 18 : 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      SizedBox(height: 24),
+                                      ElevatedButton.icon(
+                                        onPressed: _checkPermission,
+                                        icon: Icon(Icons.camera_alt),
+                                        label: Text(AppText.scanCompositionPermissionButton),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.primary,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Stack(
+                                  children: [
+                                    if (_isCameraInitialized)
+                                      Transform.scale(
+                                        scale: 2.15,
+                                        child: Center(
+                                          child: AspectRatio(
+                                            aspectRatio: 1 / _cameraController!.value.aspectRatio,
+                                            child: CameraPreview(_cameraController!),
+                                          ),
+                                        ),
+                                      ),
+                                    // Overlay kotak scan
+                                    Center(
+                                      child: Container(
+                                        width: isTablet ? 300 : 220,
+                                        height: isTablet ? 150 : 100,
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 3,
+                                          ),
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                    ),
+                                    // Teks instruksi
+                                    Positioned(
+                                      bottom: 24,
+                                      left: 0,
+                                      right: 0,
+                                      child: Center(
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.7),
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          child: Text(
+                                            AppText.scanCompositionInstruction,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: isTablet ? 16 : 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // Tombol flash
+                                    Positioned(
+                                      top: 16,
+                                      right: 16,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: BorderRadius.circular(30),
+                                        ),
+                                        child: IconButton(
+                                          icon: Icon(
+                                            _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                                            color: Colors.white,
+                                            size: 28,
+                                          ),
+                                          onPressed: _toggleFlash,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      SizedBox(height: isTablet ? 40 : 24),
+                      // Tombol Scan
+                      Container(
+                        width: double.infinity,
+                        constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
+                        child: ElevatedButton.icon(
+                          onPressed: _loading ? null : _scanText,
+                          icon: Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: access.iconSize,
+                          ),
+                          label: Text(
+                            _loading ? AppText.scanningButton : AppText.scanCompositionButton,
+                            style: AppStyles.body(context).copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            padding: EdgeInsets.symmetric(
+                              vertical: isTablet ? 20 : 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 4,
+                          ),
+                        ),
+                      ),
+                      if (_error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _error!,
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (_ingredients.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(top: 16),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                spreadRadius: 5,
+                                blurRadius: 7,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _statusColor().withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      _statusText().toUpperCase(),
+                                      style: TextStyle(
+                                        color: _statusColor(),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                'Analisis Komposisi:',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              
+                              // Display composition analysis
+                              if (_compositionAnalysis['haram']?.isNotEmpty == true) ...[
+                                _buildCompositionSection('Bahan Haram', _compositionAnalysis['haram']!, Colors.red),
+                                const SizedBox(height: 12),
+                              ],
+                              
+                              if (_compositionAnalysis['meragukan']?.isNotEmpty == true) ...[
+                                _buildCompositionSection('Bahan Meragukan', _compositionAnalysis['meragukan']!, Colors.orange),
+                                const SizedBox(height: 12),
+                              ],
+                              
+                              if (_compositionAnalysis['unknown']?.isNotEmpty == true) ...[
+                                _buildCompositionSection('Bahan Tidak Dikenal', _compositionAnalysis['unknown']!, Colors.grey),
+                                const SizedBox(height: 12),
+                              ],
+                              
+                              if (_compositionAnalysis['halal']?.isNotEmpty == true) ...[
+                                _buildCompositionSection('Bahan Halal', _compositionAnalysis['halal']!, Colors.green),
+                              ],
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -405,12 +496,16 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                 title.contains('Haram') ? Icons.warning : 
                 title.contains('Meragukan') || title.contains('Tidak Dikenal') ? Icons.help_outline : Icons.check_circle,
                 color: color,
-                size: AppIconSizes.size(context),
+                size: 20,
               ),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: color),
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -421,7 +516,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
               children: [
                 Icon(
                   Icons.circle,
-                  size: AppIconSizes.size(context),
+                  size: 6,
                   color: color,
                 ),
                 const SizedBox(width: 8),
@@ -431,12 +526,19 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                     children: [
                       Text(
                         ingredient.name,
-                        style: AppStyles.body(context).copyWith(fontWeight: FontWeight.w500, color: color.withOpacity(0.8)),
+                        style: TextStyle(
+                          color: color.withOpacity(0.8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       if (ingredient.description.isNotEmpty)
                         Text(
                           ingredient.description,
-                          style: AppStyles.body(context).copyWith(color: color.withOpacity(0.6)),
+                          style: TextStyle(
+                            color: color.withOpacity(0.6),
+                            fontSize: 11,
+                          ),
                         ),
                     ],
                   ),

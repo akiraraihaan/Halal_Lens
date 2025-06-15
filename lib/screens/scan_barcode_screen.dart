@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/firebase_service.dart';
-import '../services/history_service.dart';
 import '../models/product.dart';
 import '../models/ingredient.dart';
-import '../models/scan_history.dart';
-import 'package:barcode_scan2/barcode_scan2.dart';
 import '../constants/app_constants.dart';
+import '../constants/text_constants.dart';
 import '../services/accessibility_provider.dart';
 import 'scan_ocr_screen.dart';
-import 'package:camera/camera.dart';
+import 'barcode_result_screen.dart';
+import '../services/history_service.dart';
+import '../models/scan_history.dart';
 
 class ScanBarcodeScreen extends StatefulWidget {
   const ScanBarcodeScreen({Key? key}) : super(key: key);
@@ -19,142 +21,128 @@ class ScanBarcodeScreen extends StatefulWidget {
 }
 
 class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
-  Product? _product;
-  String? _barcode;
-  String? _error;
-  bool _loading = false;
-  Map<String, List<Ingredient>> _compositionAnalysis = {};
-  CameraController? _cameraController;
-  bool _isCameraInitialized = false;
+  bool _isFlashOn = false;
+  late MobileScannerController _scannerController;
+  bool _hasPermission = false;
+  String? _lastScannedBarcode;
+  DateTime? _lastScanTime;
 
   @override
   void initState() {
     super.initState();
-    _initCameraAndScan();
+    _checkPermission();
   }
 
-  Future<void> _initCameraAndScan() async {
-    try {
-      final cameras = await availableCameras();
-      if (cameras.isNotEmpty) {
-        _cameraController = CameraController(cameras[0], ResolutionPreset.medium);
-        await _cameraController!.initialize();
-        setState(() {
-          _isCameraInitialized = true;
-        });
-        _scanBarcode();
+  Future<void> _checkPermission() async {
+    final status = await Permission.camera.request();
+    setState(() {
+      _hasPermission = status.isGranted;
+      if (_hasPermission) {
+        _scannerController = MobileScannerController(
+          detectionSpeed: DetectionSpeed.normal,
+          facing: CameraFacing.back,
+          torchEnabled: false,
+        );
       }
-    } catch (e) {
-      setState(() {
-        _error = 'Kamera gagal diinisialisasi';
-      });
-    }
+    });
   }
 
   @override
   void dispose() {
-    _cameraController?.dispose();
+    if (_hasPermission) {
+      _scannerController.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _scanBarcode() async {
+  Future<void> _processBarcode(String barcode) async {
+    // Prevent duplicate scans within 2 seconds
+    if (barcode == _lastScannedBarcode && 
+        _lastScanTime != null && 
+        DateTime.now().difference(_lastScanTime!) < const Duration(seconds: 2)) {
+      return;
+    }
+
     setState(() {
-      _loading = true;
-      _error = null;
-      _product = null;
-      _compositionAnalysis = {};
+      _lastScannedBarcode = barcode;
+      _lastScanTime = DateTime.now();
     });
+
     try {
-      var result = await BarcodeScanner.scan(
-        options: ScanOptions(
-          useCamera: 0,
-        ),
-      );
-      String barcode = result.rawContent;
-      if (barcode.isEmpty) {
-        setState(() {
-          _loading = false;
-          _error = AppText.barcodeNotFound;
-        });
-        return;
-      }
       Product? product = await FirebaseService.getProduct(barcode);
       if (product != null) {
         Map<String, List<Ingredient>> analysis = 
             await FirebaseService.checkCompositions(product.compositions);
         
-        final historyItem = ScanHistory(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+        // Save to history
+        await HistoryService.addScanHistory(ScanHistory(
           productName: product.name,
           barcode: barcode,
-          compositions: product.compositions,
-          overallStatus: _getOverallStatusFromAnalysis(analysis),
-          scanDate: DateTime.now(),
           scanType: 'barcode',
+          overallStatus: _getOverallStatus(analysis),
+          compositions: product.compositions,
+          scanDate: DateTime.now(),
           compositionAnalysis: analysis.map((key, value) => 
-            MapEntry(key, value.map((ingredient) => ingredient.name).toList())),
-        );
-        await HistoryService.addScanHistory(historyItem);
+            MapEntry(key, value.map((e) => e.name).toList())),
+        ));
         
-        setState(() {
-          _barcode = barcode;
-          _product = product;
-          _compositionAnalysis = analysis;
-          _loading = false;
-        });
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BarcodeResultScreen(
+              barcode: barcode,
+              product: product,
+              compositionAnalysis: analysis,
+            ),
+          ),
+        );
       } else {
-        setState(() {
-          _barcode = barcode;
-          _product = null;
-          _loading = false;
-          _error = AppText.productNotFound;
-        });
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BarcodeResultScreen(
+              barcode: barcode,
+              product: null,
+              compositionAnalysis: {},
+              error: AppText.productNotFound,
+            ),
+          ),
+        );
       }
     } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = AppText.scanError;
-      });
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BarcodeResultScreen(
+            barcode: null,
+            product: null,
+            compositionAnalysis: {},
+            error: AppText.scanError,
+          ),
+        ),
+      );
     }
   }
 
-  Color _getOverallStatusColor() {
-    if (_compositionAnalysis.isEmpty) return AppColors.grey;
-    
-    if (_compositionAnalysis['haram']?.isNotEmpty == true) {
-      return AppColors.error;
-    } else if (_compositionAnalysis['meragukan']?.isNotEmpty == true || 
-               _compositionAnalysis['unknown']?.isNotEmpty == true) {
-      return AppColors.warning;
-    } else {
-      return AppColors.success;
-    }
-  }
-
-  String _getOverallStatus() {
-    if (_compositionAnalysis.isEmpty) return AppText.statusUnknown;
-    
-    if (_compositionAnalysis['haram']?.isNotEmpty == true) {
-      return AppText.statusHaram;
-    } else if (_compositionAnalysis['meragukan']?.isNotEmpty == true || 
-               _compositionAnalysis['unknown']?.isNotEmpty == true) {
-      return AppText.statusMeragukan;
-    } else {
-      return AppText.statusHalal;
-    }
-  }
-
-  String _getOverallStatusFromAnalysis(Map<String, List<Ingredient>> analysis) {
-    if (analysis.isEmpty) return 'unknown';
-    
+  String _getOverallStatus(Map<String, List<Ingredient>> analysis) {
+    if (analysis.isEmpty) return AppText.categoryUnknown;
     if (analysis['haram']?.isNotEmpty == true) {
-      return 'haram';
-    } else if (analysis['meragukan']?.isNotEmpty == true || 
-               analysis['unknown']?.isNotEmpty == true) {
-      return 'meragukan';
+      return AppText.categoryHaram;
+    } else if (analysis['syubhat']?.isNotEmpty == true) {
+      return AppText.categoryMeragukan;
     } else {
-      return 'halal';
+      return AppText.categoryHalal;
     }
+  }
+
+  Future<void> _toggleFlash() async {
+    if (!_hasPermission) return;
+    try {
+      await _scannerController.toggleTorch();
+      setState(() {
+        _isFlashOn = !_isFlashOn;
+      });
+    } catch (e) {}
   }
 
   @override
@@ -162,295 +150,217 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
     final access = Provider.of<AccessibilityProvider>(context);
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
-    
+    final isMonochromeMode = access.isColorBlindMode;
+
+    final backgroundColor = isMonochromeMode ? 
+      AppColors.backgroundMonochrome : AppColors.background;
+    final textColor = isMonochromeMode ? 
+      AppColors.textPrimaryMonochrome : AppColors.textPrimary;
+    final primaryColor = isMonochromeMode ? 
+      AppColors.primaryMonochrome : AppColors.primary;
+    final secondaryColor = isMonochromeMode ? 
+      AppColors.secondaryMonochrome : AppColors.secondary;
+
     return Scaffold(
-      backgroundColor: access.isColorBlindMode ? AppColors.backgroundMonochrome : AppColors.background,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: access.isColorBlindMode ? AppColors.backgroundMonochrome : AppColors.background,
+        backgroundColor: backgroundColor,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back, 
-            color: access.isColorBlindMode ? AppColors.primaryMonochrome : AppColors.primary, 
-            size: access.iconSize
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          AppText.scanBarcodeTitle,
-          style: AppStyles.heading(context).copyWith(
-            color: access.isColorBlindMode ? AppColors.primaryMonochrome : AppColors.primary, 
-            fontSize: access.fontSize * 1.2
+        toolbarHeight: 80,
+        centerTitle: true,
+        title: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            textAlign: TextAlign.center,
+            AppText.scanBarcodeTitle,
+            style: AppStyles.heading(context).copyWith(
+              color: textColor,
+            ),
           ),
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(isTablet ? AppSizes.screenPaddingXLarge : AppSizes.screenPaddingLarge),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(height: isTablet ? 32 : 16),
-              Center(
-                child: Container(
-                  width: isTablet ? 400 : 300,
-                  height: isTablet ? 300 : 220,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    color: Colors.black,
-                  ),
-                  child: _isCameraInitialized && _cameraController != null
-                      ? ClipRRect(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.all(isTablet ? AppSizes.screenPaddingXLarge : AppSizes.screenPaddingLarge),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(height: isTablet ? 32 : 16),
+                      // Scanner Container
+                      Container(
+                        width: double.infinity,
+                        height: isTablet ? 400 : 300,
+                        decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(24),
-                          child: CameraPreview(_cameraController!),
-                        )
-                      : Center(child: CircularProgressIndicator()),
-                ),
-              ),
-              SizedBox(height: isTablet ? 32 : 20),
-              if (_barcode != null)
-                Container(
-                  padding: EdgeInsets.all(AppSizes.spacingMedium),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
-                    border: Border.all(color: AppColors.grey.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.qr_code, color: AppColors.grey, size: access.iconSize),
-                      SizedBox(width: AppSizes.spacingSmall),
-                      Text(
-                        '${AppText.barcodeLabel}: $_barcode',
-                        style: AppStyles.body(context),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_error != null)
-                Container(
-                  margin: EdgeInsets.only(top: AppSizes.spacingMedium),
-                  padding: EdgeInsets.all(AppSizes.spacingMedium),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
-                    border: Border.all(color: AppColors.error.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: AppColors.error),
-                      SizedBox(width: AppSizes.spacingSmall),
-                      Expanded(
-                        child: Text(
-                          _error!,
-                          style: AppStyles.body(context),
+                          color: Colors.black,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              SizedBox(height: isTablet ? 24 : 16),
-              Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ScanOCRScreen()));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: Size(double.infinity, isTablet ? AppSizes.buttonSizeTablet : AppSizes.buttonSize),
-                      backgroundColor: AppColors.secondary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.buttonBorderRadius),
-                      ),
-                      elevation: AppSizes.buttonElevation,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.document_scanner, color: AppColors.white, size: access.iconSize),
-                        SizedBox(width: isTablet ? AppSizes.spacingMedium : AppSizes.spacingSmall),
-                        Text(
-                          'Scan Komposisi',
-                          style: AppStyles.body(context).copyWith(fontWeight: FontWeight.bold, color: AppColors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: isTablet ? 24 : 16),
-              if (_product != null)
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Container(
-                      margin: EdgeInsets.only(top: AppSizes.spacingMedium),
-                      padding: EdgeInsets.all(AppSizes.spacingLarge),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(AppSizes.borderRadiusLarge),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.grey.withOpacity(0.1),
-                            spreadRadius: 5,
-                            blurRadius: 7,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppSizes.spacingSmall,
-                                  vertical: AppSizes.spacingXSmall,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getOverallStatusColor().withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
-                                ),
-                                child: Text(
-                                  _getOverallStatus().toUpperCase(),
-                                  style: AppStyles.body(context).copyWith(
-                                    color: _getOverallStatusColor(),
-                                    fontWeight: FontWeight.bold,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: !_hasPermission
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.camera_alt, color: Colors.white, size: 64),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        AppText.scanBarcodePermission,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: isTablet ? 18 : 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      SizedBox(height: 24),
+                                      ElevatedButton.icon(
+                                        onPressed: _checkPermission,
+                                        icon: Icon(Icons.camera_alt),
+                                        label: Text(AppText.scanBarcodePermissionButton),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.primary,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                )
+                              : Stack(
+                                  children: [
+                                    MobileScanner(
+                                      controller: _scannerController,
+                                      onDetect: (capture) {
+                                        final List<Barcode> barcodes = capture.barcodes;
+                                        if (barcodes.isNotEmpty) {
+                                          _processBarcode(barcodes.first.rawValue ?? '');
+                                        }
+                                      },
+                                    ),
+                                    // Overlay kotak scan
+                                    Center(
+                                      child: Container(
+                                        width: isTablet ? 300 : 220,
+                                        height: isTablet ? 150 : 100,
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 3,
+                                          ),
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                    ),
+                                    // Teks instruksi
+                                    Positioned(
+                                      bottom: 24,
+                                      left: 0,
+                                      right: 0,
+                                      child: Center(
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.7),
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          child: Text(
+                                            AppText.scanBarcodeInstruction,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: isTablet ? 16 : 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // Tombol flash
+                                    Positioned(
+                                      top: 16,
+                                      right: 16,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: BorderRadius.circular(30),
+                                        ),
+                                        child: IconButton(
+                                          icon: Icon(
+                                            _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                                            color: Colors.white,
+                                            size: 28,
+                                          ),
+                                          onPressed: _toggleFlash,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: AppSizes.spacingMedium),
-                          Text(
-                            _product!.name,
-                            style: AppStyles.heading(context),
-                          ),
-                          SizedBox(height: AppSizes.spacingLarge),
-                          _buildInfoRow(AppText.certificateNumber, _product!.certificateNumber),
-                          _buildInfoRow(AppText.expiredDate, _formatExpiredDate(_product!.expiredDate)),
-                          SizedBox(height: AppSizes.spacingMedium),
-                          Text(
-                            AppText.compositionAnalysis,
-                            style: AppStyles.subheading(context),
-                          ),
-                          SizedBox(height: AppSizes.spacingSmall),
-                          if (_compositionAnalysis['haram']?.isNotEmpty == true) ...[
-                            _buildCompositionSection(AppText.haramIngredients, _compositionAnalysis['haram']!, AppColors.error),
-                            SizedBox(height: AppSizes.spacingSmall),
-                          ],
-                          if (_compositionAnalysis['meragukan']?.isNotEmpty == true) ...[
-                            _buildCompositionSection(AppText.meragukanIngredients, _compositionAnalysis['meragukan']!, AppColors.warning),
-                            SizedBox(height: AppSizes.spacingSmall),
-                          ],
-                          if (_compositionAnalysis['unknown']?.isNotEmpty == true) ...[
-                            _buildCompositionSection(AppText.unknownIngredients, _compositionAnalysis['unknown']!, AppColors.grey),
-                            SizedBox(height: AppSizes.spacingSmall),
-                          ],
-                          if (_compositionAnalysis['halal']?.isNotEmpty == true) ...[
-                            _buildCompositionSection(AppText.halalIngredients, _compositionAnalysis['halal']!, AppColors.success),
-                          ],
-                        ],
+                        ),
                       ),
-                    ),
+                      SizedBox(height: isTablet ? 40 : 24),
+                      // Tombol Scan OCR
+                      Container(
+                        width: double.infinity,
+                        constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const ScanOCRScreen()),
+                            );
+                          },
+                          icon: Icon(
+                            Icons.document_scanner,
+                            color: Colors.white,
+                            size: access.iconSize,
+                          ),
+                          label: Text(
+                            AppText.scanCompositionButton,
+                            style: AppStyles.body(context).copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: secondaryColor,
+                            padding: EdgeInsets.symmetric(
+                              vertical: isTablet ? 20 : 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 4,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSizes.spacingSmall),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: AppStyles.body(context).copyWith(
-                color: AppColors.grey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppStyles.body(context).copyWith(fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompositionSection(String title, List<Ingredient> ingredients, Color color) {
-    return Container(
-      padding: EdgeInsets.all(AppSizes.spacingSmall),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                title.contains('Haram') ? Icons.warning : 
-                title.contains('Meragukan') || title.contains('Tidak Dikenal') ? Icons.help_outline : Icons.check_circle,
-                color: color,
-                size: AppIconSizes.size(context),
-              ),
-              SizedBox(width: AppSizes.spacingXSmall),
-              Text(
-                title,
-                style: AppStyles.body(context).copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSizes.spacingXSmall),
-          ...ingredients.map((ingredient) => Padding(
-            padding: EdgeInsets.only(bottom: AppSizes.spacingXSmall),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.circle,
-                  size: 6,
-                  color: color,
-                ),
-                SizedBox(width: AppSizes.spacingXSmall),
-                Expanded(
-                  child: Text(
-                    ingredient.name,
-                    style: AppStyles.body(context).copyWith(
-                      color: color.withOpacity(0.8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-
-  String _formatExpiredDate(DateTime date) {
-    final months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

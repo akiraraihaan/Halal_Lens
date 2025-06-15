@@ -5,10 +5,12 @@ class AccessibilityProvider extends ChangeNotifier {
   double _fontSize = 16;
   double _iconSize = 24;
   bool _isColorBlindMode = false;
+  String _textSize = 'sedang'; // Default text size
 
   double get fontSize => _fontSize;
   double get iconSize => _iconSize;
   bool get isColorBlindMode => _isColorBlindMode;
+  String get textSize => _textSize;
 
   AccessibilityProvider() {
     _load();
@@ -19,6 +21,7 @@ class AccessibilityProvider extends ChangeNotifier {
     _fontSize = prefs.getDouble('access_fontSize') ?? 16;
     _iconSize = prefs.getDouble('access_iconSize') ?? 24;
     _isColorBlindMode = prefs.getBool('access_colorBlindMode') ?? false;
+    _textSize = prefs.getString('access_textSize') ?? 'sedang';
     notifyListeners();
   }
 
@@ -41,5 +44,14 @@ class AccessibilityProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('access_colorBlindMode', enabled);
     notifyListeners();
+  }
+
+  Future<void> setTextSize(String size) async {
+    if (['kecil', 'sedang', 'besar', 'sangat_besar'].contains(size)) {
+      _textSize = size;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('access_textSize', size);
+      notifyListeners();
+    }
   }
 }
