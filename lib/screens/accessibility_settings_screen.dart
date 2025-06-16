@@ -14,46 +14,35 @@ class AccessibilitySettingsScreen extends StatefulWidget {
 }
 
 class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  
+  // Initialize with default values
+  String _textSize = 'sedang';
+  String _pendingTextSize = 'sedang';
+  double _iconSize = AppSizes.iconSize;
+  double _pendingIconSize = AppSizes.iconSize;
+  bool _isColorBlindMode = false;
+  bool _pendingColorBlindMode = false;
+  int _currentLanguageIndex = 0;
+  int _pendingLanguageIndex = 0;
+  
   final List<String> _textSizeOptions = ['kecil', 'sedang', 'besar', 'sangat_besar'];
   final List<double> _iconSizeOptions = [
     AppSizes.iconSizeSmall,
     AppSizes.iconSize,
     AppSizes.iconSizeTablet,
   ];
-  
-  late String _textSize;
-  late double _iconSize;
-  late String _pendingTextSize;
-  late double _pendingIconSize;
-  late bool _isColorBlindMode;
-  late bool _pendingColorBlindMode;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
-    _textSize = _textSizeOptions[1]; // Default to 'sedang'
-    _iconSize = _iconSizeOptions[1]; // Default to medium
-    _pendingTextSize = _textSizeOptions[1];
-    _pendingIconSize = _iconSizeOptions[1];
-    _isColorBlindMode = false;
-    _pendingColorBlindMode = false;
-    
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: Duration(milliseconds: 500),
     );
-    
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    
-    _loadSettings();
     _animationController.forward();
+    _loadSettings();
   }
 
   @override
@@ -63,59 +52,112 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    String savedTextSize = prefs.getString('access_textSize') ?? _textSizeOptions[1];
-    double savedIconSize = prefs.getDouble('access_iconSize') ?? _iconSizeOptions[1];
-    bool savedColorBlindMode = prefs.getBool('access_colorBlindMode') ?? false;
-    
-    setState(() {
-      if (_textSizeOptions.contains(savedTextSize)) {
-        _textSize = savedTextSize;
-        _pendingTextSize = savedTextSize;
-      }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final access = Provider.of<AccessibilityProvider>(context, listen: false);
       
-      if (_iconSizeOptions.contains(savedIconSize)) {
-        _iconSize = savedIconSize;
-        _pendingIconSize = savedIconSize;
-      }
+      // Load text size
+      _textSize = prefs.getString('access_textSize') ?? 'sedang';
+      _pendingTextSize = _textSize;
       
-      _isColorBlindMode = savedColorBlindMode;
-      _pendingColorBlindMode = savedColorBlindMode;
-    });
+      // Load icon size
+      _iconSize = prefs.getDouble('access_iconSize') ?? AppSizes.iconSize;
+      _pendingIconSize = _iconSize;
+      
+      // Load color blind mode from provider
+      _isColorBlindMode = access.isColorBlindMode;
+      _pendingColorBlindMode = _isColorBlindMode;
+      
+      // Load language
+      _currentLanguageIndex = prefs.getInt('access_languageIndex') ?? 0;
+      _pendingLanguageIndex = _currentLanguageIndex;
+      
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error loading settings: $e');
+    }
   }
 
   Future<void> _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('access_textSize', _pendingTextSize);
-    await prefs.setDouble('access_iconSize', _pendingIconSize);
-    
-    setState(() {
-      _textSize = _pendingTextSize;
-      _iconSize = _pendingIconSize;
-    });
-    
-    final access = Provider.of<AccessibilityProvider>(context, listen: false);
-    await access.setTextSize(_pendingTextSize);
-    await access.setIconSize(_pendingIconSize);
-    final isMonochromeMode = access.isColorBlindMode;
-    
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: AppSizes.spacingSmall),
-            Text(AppText.settingsSaved),
-          ],
-        ),
-        backgroundColor: isMonochromeMode ? AppColors.successMonochrome : AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSizes.borderRadiusSmall),
-        ),
-      ),
-    );
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Save text size
+      await prefs.setString('access_textSize', _pendingTextSize);
+      
+      // Save icon size
+      await prefs.setDouble('access_iconSize', _pendingIconSize);
+      
+      // Save color blind mode
+      await prefs.setBool('access_colorBlindMode', _pendingColorBlindMode);
+      
+      // Save language
+      await prefs.setInt('access_languageIndex', _pendingLanguageIndex);
+      
+      // Update state
+      setState(() {
+        _textSize = _pendingTextSize;
+        _iconSize = _pendingIconSize;
+        _isColorBlindMode = _pendingColorBlindMode;
+        _currentLanguageIndex = _pendingLanguageIndex;
+      });
+      
+      // Update provider
+      final access = Provider.of<AccessibilityProvider>(context, listen: false);
+      await access.setTextSize(_pendingTextSize);
+      await access.setIconSize(_pendingIconSize);
+      await access.setColorBlindMode(_pendingColorBlindMode);
+      await access.setLanguage(_pendingLanguageIndex);
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppText.settingsSaved,
+              style: AppStyles.body(context).copyWith(color: Colors.white),
+            ),
+            backgroundColor: _isColorBlindMode ? 
+              AppColors.primaryMonochrome : 
+              AppColors.primary,
+            duration: Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.top + 500, // Add extra padding for bottom navigation
+              left: AppSizes.spacingMedium,
+              right: AppSizes.spacingMedium,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.borderRadiusSmall),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppText.errorSavingSettings,
+              style: AppStyles.body(context).copyWith(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom + 80, // Add extra padding for bottom navigation
+              left: AppSizes.spacingMedium,
+              right: AppSizes.spacingMedium,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.borderRadiusSmall),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   String _getTextSizeLabel(String size) {
@@ -142,6 +184,7 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
   @override
   Widget build(BuildContext context) {
     final access = Provider.of<AccessibilityProvider>(context);
+    // Use provider's color blind mode for initial background
     final isMonochromeMode = access.isColorBlindMode;
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
@@ -187,10 +230,10 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
               children: [
                 SizedBox(height: isTablet ? AppSizes.spacingMedium : AppSizes.spacingSmall),
                 
-                // Mode Buta Warna Section
+                // Language Selection Section
                 _buildSection(
-                  AppText.colorBlindMode,
-                  Icons.visibility,
+                  AppText.languageSettings,
+                  Icons.language,
                   secondaryColor,
                   textColor,
                   isTablet,
@@ -200,6 +243,7 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                       borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
                     ),
                     child: Container(
+                      padding: EdgeInsets.all(AppSizes.spacingLarge),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
                         gradient: LinearGradient(
@@ -215,34 +259,65 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                           ],
                         ),
                       ),
-                      child: SwitchListTile(
-                        title: Text(
-                          AppText.colorBlindMode,
-                          style: AppStyles.title(context).copyWith(
-                            color: textColor,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppText.languageSettingsDescription,
+                            style: AppStyles.subtitle(context).copyWith(
+                              color: textColor.withOpacity(0.7),
+                            ),
                           ),
-                        ),
-                        subtitle: Text(
-                          AppText.colorBlindModeDescription,
-                          style: AppStyles.subtitle(context).copyWith(
-                            color: textColor.withOpacity(0.7),
+                          SizedBox(height: AppSizes.spacingMedium),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSizes.spacingMedium,
+                              vertical: AppSizes.spacingSmall,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(AppSizes.borderRadiusSmall),
+                              border: Border.all(
+                                color: primaryColor.withOpacity(0.3),
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                value: _pendingLanguageIndex,
+                                isExpanded: true,
+                                icon: Icon(Icons.arrow_drop_down, color: primaryColor),
+                                style: AppStyles.body(context).copyWith(color: textColor),
+                                items: [
+                                  DropdownMenuItem<int>(
+                                    value: 0,
+                                    child: Text(
+                                      AppText.languageIndonesian,
+                                      style: AppStyles.body(context).copyWith(
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  DropdownMenuItem<int>(
+                                    value: 1,
+                                    child: Text(
+                                      AppText.languageEnglish,
+                                      style: AppStyles.body(context).copyWith(
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _pendingLanguageIndex = value;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
                           ),
-                        ),
-                        value: _pendingColorBlindMode,
-                        onChanged: (value) async {
-                          setState(() {
-                            _pendingColorBlindMode = value;
-                            _isColorBlindMode = value;
-                          });
-                          
-                          final access = Provider.of<AccessibilityProvider>(context, listen: false);
-                          await access.setColorBlindMode(value);
-                          
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('access_colorBlindMode', value);
-                        },
-                        activeColor: primaryColor,
-                        activeTrackColor: primaryColor.withOpacity(0.5),
+                        ],
                       ),
                     ),
                   ),
@@ -250,7 +325,70 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                 
                 SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
                 
-                // Ukuran Font Section
+                // Color Blind Mode Section
+                _buildSection(
+                  AppText.colorBlindMode,
+                  Icons.visibility,
+                  secondaryColor,
+                  textColor,
+                  isTablet,
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
+                    ),
+                    child: Container(
+                      padding: EdgeInsets.all(AppSizes.spacingLarge),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            isMonochromeMode ? 
+                              AppColors.backgroundMonochrome : 
+                              AppColors.background,
+                            isMonochromeMode ? 
+                              AppColors.backgroundMonochrome.withOpacity(0.8) : 
+                              AppColors.background.withOpacity(0.8),
+                          ],
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppText.colorBlindModeDescription,
+                            style: AppStyles.subtitle(context).copyWith(
+                              color: textColor.withOpacity(0.7),
+                            ),
+                          ),
+                          SizedBox(height: AppSizes.spacingMedium),
+                          SwitchListTile(
+                            title: Text(
+                              AppText.colorBlindMode,
+                              style: AppStyles.title(context).copyWith(
+                                color: textColor,
+                              ),
+                            ),
+                            value: _pendingColorBlindMode,
+                            onChanged: (value) {
+                              setState(() {
+                                _pendingColorBlindMode = value;
+                              });
+                            },
+                            activeColor: primaryColor,
+                            activeTrackColor: primaryColor.withOpacity(0.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
+                
+                // Text Size Section
                 _buildSection(
                   AppText.textSizeTitle,
                   Icons.format_size,
@@ -332,7 +470,46 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                               ),
                             ),
                           ),
-                          SizedBox(height: AppSizes.spacingLarge),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
+                
+                // Icon Size Section
+                _buildSection(
+                  AppText.iconSizeDescription,
+                  Icons.photo_size_select_large,
+                  secondaryColor,
+                  textColor,
+                  isTablet,
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
+                    ),
+                    child: Container(
+                      padding: EdgeInsets.all(AppSizes.spacingLarge),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppSizes.borderRadiusMedium),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            isMonochromeMode ? 
+                              AppColors.backgroundMonochrome : 
+                              AppColors.background,
+                            isMonochromeMode ? 
+                              AppColors.backgroundMonochrome.withOpacity(0.8) : 
+                              AppColors.background.withOpacity(0.8),
+                          ],
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
                             AppText.iconSizeDescription,
                             style: AppStyles.subtitle(context).copyWith(
@@ -365,7 +542,12 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                                       children: [
                                         Icon(Icons.accessibility, size: size, color: textColor),
                                         SizedBox(width: AppSizes.spacingSmall),
-                                        Text(_getIconSizeLabel(size)),
+                                        Text(
+                                          _getIconSizeLabel(size),
+                                          style: AppStyles.body(context).copyWith(
+                                            color: primaryColor,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   );
@@ -386,12 +568,15 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                   ),
                 ),
                 
-                SizedBox(height: isTablet ? AppSizes.spacingXLarge : AppSizes.spacingLarge),
+                SizedBox(height: AppSizes.spacingXLarge),
                 
                 // Save Button
                 Center(
                   child: ElevatedButton(
-                    onPressed: (_pendingTextSize != _textSize || _pendingIconSize != _iconSize) 
+                    onPressed: (_pendingTextSize != _textSize || 
+                              _pendingIconSize != _iconSize || 
+                              _pendingColorBlindMode != _isColorBlindMode ||
+                              _pendingLanguageIndex != _currentLanguageIndex) 
                       ? _saveSettings 
                       : null,
                     style: ElevatedButton.styleFrom(
@@ -413,6 +598,8 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
                     ),
                   ),
                 ),
+                
+                SizedBox(height: AppSizes.spacingXLarge),
               ],
             ),
           ),
@@ -450,3 +637,4 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
     );
   }
 }
+

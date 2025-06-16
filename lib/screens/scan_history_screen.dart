@@ -8,6 +8,8 @@ import '../services/tts_service.dart'; // Tambahkan import TTS service
 import '../constants/app_constants.dart';
 import '../constants/text_constants.dart';
 
+
+
 class ScanHistoryScreen extends StatefulWidget {
   const ScanHistoryScreen({super.key});
 
@@ -50,12 +52,12 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Semua Riwayat'),
-        content: const Text('Apakah Anda yakin ingin menghapus semua riwayat scan?'),
+        title: Text(AppText.clearHistory),
+        content: Text(AppText.clearHistoryDescription),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: Text(AppText.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -63,7 +65,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
               await HistoryService.clearHistory();
               _loadHistory();
             },
-            child: const Text('Hapus Semua'),
+            child: Text(AppText.clearAllHistory),
           ),
         ],
       ),
@@ -125,7 +127,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
             IconButton(
               icon: Icon(Icons.delete_sweep, size: access.iconSize),
               onPressed: _clearAllHistory,
-              tooltip: 'Hapus Semua Riwayat',
+              tooltip: AppText.clearAllHistory,
             ),
         ],
       ),
@@ -158,7 +160,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
           ),
           SizedBox(height: isTablet ? 32 : 24),
           Text(
-            'Belum ada riwayat scan',
+            AppText.noScanHistory,
             style: TextStyle(
               fontSize: isTablet ? 24 : 20,
               fontWeight: FontWeight.bold,
@@ -167,7 +169,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
           ),
           SizedBox(height: isTablet ? 16 : 12),
           Text(
-            'Mulai scan produk untuk melihat riwayat',
+            AppText.startScanning,
             style: TextStyle(
               fontSize: isTablet ? 16 : 14,
               color: Colors.grey.shade600,
@@ -332,7 +334,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Komposisi:',
+                        AppText.composition,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: isTablet ? 14 : 12,
@@ -424,7 +426,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                       label: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12.0),
                         child: Text(
-                          'Bacakan Status Produk Ini',
+                          AppText.listenProductStatus,
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -478,7 +480,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                                     IconButton(
                                       icon: Icon(Icons.volume_up, color: statusColor),
                                       onPressed: () => _speakStatus(history.productName, history.overallStatus),
-                                      tooltip: 'Bacakan status',
+                                      tooltip: AppText.listenProductStatus,
                                       padding: EdgeInsets.zero,
                                       constraints: BoxConstraints(),
                                       iconSize: 18,
@@ -842,6 +844,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
 
   // Method untuk memanggil text-to-speech
   void _speakStatus(String productName, String status) {
-    TTSService.speakProductStatus(productName, status);
+    final ttsService = TTSService();
+    ttsService.speakProductStatus(productName, status);
   }
 }

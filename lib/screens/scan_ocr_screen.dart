@@ -12,6 +12,7 @@ import '../models/scan_history.dart';
 import '../constants/app_constants.dart';
 import '../constants/text_constants.dart';
 import 'ocr_result_screen.dart';
+import 'scan_barcode_screen.dart';
 // import 'package:flutter_tts/flutter_tts.dart'; // Uncomment if using flutter_tts
 
 class ScanOCRScreen extends StatefulWidget {
@@ -37,24 +38,52 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
     _checkPermission();
   }
 
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
   Future<void> _checkPermission() async {
     final status = await Permission.camera.request();
-    setState(() {
-      _hasPermission = status.isGranted;
-      if (_hasPermission) {
-        _initCamera();
-      }
-    });
+    if (mounted) {
+      setState(() {
+        _hasPermission = status.isGranted;
+        if (_hasPermission) {
+          _initCamera();
+        }
+      });
+    }
   }
 
   Future<void> _initCamera() async {
-    final cameras = await availableCameras();
-    if (cameras.isNotEmpty) {
-      _cameraController = CameraController(cameras[0], ResolutionPreset.high);
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) return;
+      
+      if (_cameraController != null) {
+        await _cameraController!.dispose();
+      }
+      
+      _cameraController = CameraController(
+        cameras[0],
+        ResolutionPreset.medium, // Changed from high to medium for better performance
+        enableAudio: false,
+      );
+      
       await _cameraController!.initialize();
-      setState(() {
-        _isCameraInitialized = true;
-      });
+      
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Gagal menginisialisasi kamera';
+        });
+      }
     }
   }
 
@@ -161,12 +190,6 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
     } else {
       return AppText.categoryUnknown;
     }
-  }
-
-  @override
-  void dispose() {
-    _cameraController?.dispose();
-    super.dispose();
   }
 
   @override
@@ -343,7 +366,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                         ),
                       ),
                       SizedBox(height: isTablet ? 40 : 24),
-                      // Tombol Scan
+                      // Scan Button
                       Container(
                         width: double.infinity,
                         constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
@@ -362,7 +385,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
+                            backgroundColor: secondaryColor,
                             padding: EdgeInsets.symmetric(
                               vertical: isTablet ? 20 : 16,
                             ),
@@ -373,104 +396,51 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                           ),
                         ),
                       ),
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.error_outline, color: Colors.red),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    _error!,
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (_ingredients.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(top: 16),
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                spreadRadius: 5,
-                                blurRadius: 7,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _statusColor().withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      _statusText().toUpperCase(),
-                                      style: TextStyle(
-                                        color: _statusColor(),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              const Text(
-                                'Analisis Komposisi:',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              
-                              // Display composition analysis
-                              if (_compositionAnalysis['haram']?.isNotEmpty == true) ...[
-                                _buildCompositionSection('Bahan Haram', _compositionAnalysis['haram']!, Colors.red),
-                                const SizedBox(height: 12),
-                              ],
-                              
-                if (_compositionAnalysis['meragukan']?.isNotEmpty == true) ...[
-                                _buildCompositionSection('Bahan Meragukan', _compositionAnalysis['meragukan']!, Colors.orange),
-                                const SizedBox(height: 12),
-                              ],
-                              
-                              if (_compositionAnalysis['unknown']?.isNotEmpty == true) ...[
-                                _buildCompositionSection('Bahan Tidak Dikenal', _compositionAnalysis['unknown']!, Colors.grey),
-                                const SizedBox(height: 12),
-                              ],
-                              
-                              if (_compositionAnalysis['halal']?.isNotEmpty == true) ...[
-                                _buildCompositionSection('Bahan Halal', _compositionAnalysis['halal']!, Colors.green),
-                              ],
-                            ],
-                          ),
-                        ),
                     ],
                   ),
+                ),
+              ),
+            ),
+            // Switch Mode Button at bottom
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: TextButton.icon(
+                onPressed: () async {
+                  if (_cameraController != null) {
+                    await _cameraController!.dispose();
+                  }
+                  if (mounted) {
+                    await Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ScanBarcodeScreen()),
+                    );
+                  }
+                },
+                icon: Icon(
+                  Icons.qr_code_scanner,
+                  color: primaryColor,
+                  size: access.iconSize,
+                ),
+                label: Text(
+                  AppText.switchToBarcode,
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),

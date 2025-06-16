@@ -1,47 +1,60 @@
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:halal_lens/constants/text_constants.dart';
 
 class TTSService {
-  static final FlutterTts _flutterTts = FlutterTts();
-  static bool _isInitialized = false;
+  final FlutterTts _flutterTts = FlutterTts();
+  bool _isInitialized = false;
 
-  static Future<void> _initTTS() async {
-    if (_isInitialized) return;
-    
-    await _flutterTts.setLanguage('id-ID'); // Bahasa Indonesia
-    await _flutterTts.setSpeechRate(0.5); // Kecepatan bicara (0.0 - 1.0)
-    await _flutterTts.setVolume(1.0); // Volume (0.0 - 1.0)
-    await _flutterTts.setPitch(1.0); // Pitch/nada (0.5 - 2.0)
-    
-    _isInitialized = true;
+  Future<void> initialize() async {
+    if (!_isInitialized) {
+      await _flutterTts.setLanguage(AppText.currentLanguageIndex == 0 ? 'id-ID' : 'en-US');
+      await _flutterTts.setSpeechRate(0.5);
+      await _flutterTts.setVolume(1.0);
+      await _flutterTts.setPitch(1.0);
+      _isInitialized = true;
+    }
   }
 
-  static Future<void> speak(String text) async {
-    await _initTTS();
+  Future<void> speak(String text) async {
+    await initialize();
     await _flutterTts.speak(text);
   }
 
-  static Future<void> stop() async {
+  Future<void> stop() async {
     await _flutterTts.stop();
   }
 
   /// Metode untuk membacakan status halal/haram/meragukan dengan informasi tambahan
-  static Future<void> speakProductStatus(String productName, String status) async {
-    String message;
+  Future<void> speakProductStatus(String productName, String status) async {
+    await initialize();
     
+    String message;
     switch (status.toUpperCase()) {
       case 'HALAL':
-        message = 'Produk $productName memiliki status halal dan aman untuk dikonsumsi.';
+        message = AppText.currentLanguageIndex == 0 
+          ? 'Produk $productName memiliki status halal dan aman untuk dikonsumsi.'
+          : 'Product $productName has halal status and is safe for consumption.';
         break;
       case 'HARAM':
-        message = 'Perhatian! Produk $productName memiliki status haram dan tidak direkomendasikan untuk dikonsumsi.';
+        message = AppText.currentLanguageIndex == 0
+          ? 'Perhatian! Produk $productName memiliki status haram dan tidak direkomendasikan untuk dikonsumsi.'
+          : 'Warning! Product $productName has haram status and is not recommended for consumption.';
         break;
       case 'MERAGUKAN':
-        message = 'Hati-hati! Produk $productName memiliki status meragukan, perlu pemeriksaan lebih lanjut.';
+        message = AppText.currentLanguageIndex == 0
+          ? 'Hati-hati! Produk $productName memiliki status meragukan, perlu pemeriksaan lebih lanjut.'
+          : 'Caution! Product $productName has doubtful status and needs further verification.';
         break;
       default:
-        message = 'Status produk $productName tidak dapat ditentukan.';
+        message = AppText.currentLanguageIndex == 0
+          ? 'Status produk $productName tidak dapat ditentukan.'
+          : 'Product $productName status cannot be determined.';
     }
     
-    await speak(message);
+    await _flutterTts.speak(message);
+  }
+
+  Future<void> dispose() async {
+    await _flutterTts.stop();
   }
 }

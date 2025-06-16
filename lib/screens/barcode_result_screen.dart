@@ -13,14 +13,16 @@ class BarcodeResultScreen extends StatelessWidget {
   final Product? product;
   final Map<String, List<Ingredient>> compositionAnalysis;
   final String? error;
+  final TTSService _ttsService = TTSService();
 
-  const BarcodeResultScreen({
+  BarcodeResultScreen({
     Key? key,
     this.barcode,
     this.product,
     required this.compositionAnalysis,
     this.error,
   }) : super(key: key);
+
   String _getOverallStatus() {
     if (compositionAnalysis.isEmpty) return AppText.categoryUnknown;
     if (compositionAnalysis['haram']?.isNotEmpty == true) {
@@ -122,7 +124,7 @@ class BarcodeResultScreen extends StatelessWidget {
                         label: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
                           child: Text(
-                            'Dengarkan Status Produk',
+                            AppText.listenProductStatus,
                             style: TextStyle(
                               fontSize: isTablet ? 20 : 18, 
                               fontWeight: FontWeight.bold
@@ -550,7 +552,7 @@ class BarcodeResultScreen extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                'Tidak ada data komposisi yang tersedia',
+                AppText.noCompositionData,
                 style: TextStyle(
                   fontSize: isTablet ? 16 : 14,
                   color: textColor.withOpacity(0.6),
@@ -793,6 +795,6 @@ class BarcodeResultScreen extends StatelessWidget {
   // Method untuk memanggil text-to-speech
   void _speakStatus(String productName) {
     final status = _getOverallStatus();
-    TTSService.speakProductStatus(productName, status);
+    _ttsService.speakProductStatus(productName, status);
   }
 }

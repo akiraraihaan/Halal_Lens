@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import '../constants/text_constants.dart';
 
 class ScanHistory {
   final String id;
@@ -20,6 +21,43 @@ class ScanHistory {
     required this.scanDate,
     required this.compositionAnalysis,
   }) : id = id ?? const Uuid().v4();
+
+  String get localizedStatus {
+    switch (overallStatus) {
+      case 'HALAL':
+        return AppText.categoryHalal;
+      case 'HARAM':
+        return AppText.categoryHaram;
+      case 'MERAGUKAN':
+        return AppText.categoryMeragukan;
+      default:
+        return AppText.categoryUnknown;
+    }
+  }
+
+  String get localizedStatusDescription {
+    switch (overallStatus) {
+      case 'HALAL':
+        return AppText.halalStatusDescription;
+      case 'HARAM':
+        return AppText.haramStatusDescription;
+      case 'MERAGUKAN':
+        return AppText.syubhatStatusDescription;
+      default:
+        return AppText.unknownStatusDescription;
+    }
+  }
+
+  String get localizedScanType {
+    switch (scanType) {
+      case 'BARCODE':
+        return AppText.scanTypeBarcode;
+      case 'OCR':
+        return AppText.scanTypeOCR;
+      default:
+        return scanType;
+    }
+  }
 
   factory ScanHistory.fromJson(Map<String, dynamic> json) {
     return ScanHistory(

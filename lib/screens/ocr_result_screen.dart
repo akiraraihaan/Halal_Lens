@@ -13,14 +13,16 @@ class OCRResultScreen extends StatelessWidget {
   final List<String> ingredients;
   final Map<String, List<Ingredient>> compositionAnalysis;
   final String? error;
+  final TTSService _ttsService = TTSService();
 
-  const OCRResultScreen({
+  OCRResultScreen({
     Key? key,
     required this.imagePath,
     required this.ingredients,
     required this.compositionAnalysis,
     this.error,
   }) : super(key: key);
+
   String _getOverallStatus() {
     if (compositionAnalysis.isEmpty) return AppText.categoryUnknown;
     if (compositionAnalysis['haram']?.isNotEmpty == true) {
@@ -62,7 +64,7 @@ class OCRResultScreen extends StatelessWidget {
   // Method untuk memanggil text-to-speech
   void _speakStatus(String productLabel) {
     final status = _getOverallStatus();
-    TTSService.speakProductStatus(productLabel, status);
+    _ttsService.speakProductStatus(productLabel, status);
   }
 
   @override

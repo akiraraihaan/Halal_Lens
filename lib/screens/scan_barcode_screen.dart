@@ -22,7 +22,7 @@ class ScanBarcodeScreen extends StatefulWidget {
 
 class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
   bool _isFlashOn = false;
-  late MobileScannerController _scannerController;
+  MobileScannerController? _scannerController;
   bool _hasPermission = false;
   String? _lastScannedBarcode;
   DateTime? _lastScanTime;
@@ -30,32 +30,50 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
   @override
   void initState() {
     super.initState();
-    _checkPermission();
+    _initCamera();
   }
 
-  Future<void> _checkPermission() async {
+  Future<void> _initCamera() async {
     final status = await Permission.camera.request();
-    setState(() {
-      _hasPermission = status.isGranted;
-      if (_hasPermission) {
-        _scannerController = MobileScannerController(
-          detectionSpeed: DetectionSpeed.normal,
-          facing: CameraFacing.back,
-          torchEnabled: false,
-        );
+    if (mounted) {
+      setState(() {
+        _hasPermission = status.isGranted;
+      });
+      if (status.isGranted) {
+        try {
+          // Dispose existing controller if any
+          await _scannerController?.stop();
+          _scannerController?.dispose();
+          
+          // Create new controller
+          _scannerController = MobileScannerController(
+            detectionSpeed: DetectionSpeed.normal,
+            facing: CameraFacing.back,
+            torchEnabled: false,
+          );
+          
+          // Initialize and start
+          await _scannerController?.start();
+          
+          // Force rebuild to show camera preview
+          if (mounted) {
+            setState(() {});
+          }
+        } catch (e) {
+          print('Error initializing camera: $e');
+        }
       }
-    });
+    }
   }
 
   @override
   void dispose() {
-    if (_hasPermission) {
-      _scannerController.dispose();
-    }
+    _scannerController?.dispose();
     super.dispose();
   }
 
   Future<void> _processBarcode(String barcode) async {
+    if (_scannerController == null) return;
     // Prevent duplicate scans within 2 seconds
     if (barcode == _lastScannedBarcode && 
         _lastScanTime != null && 
@@ -63,12 +81,16 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
       return;
     }
 
+    // Update last scanned barcode and time
     setState(() {
       _lastScannedBarcode = barcode;
       _lastScanTime = DateTime.now();
     });
 
     try {
+      // Pause scanner temporarily to prevent multiple scans
+      await _scannerController?.stop();
+      
       Product? product = await FirebaseService.getProduct(barcode);
       if (product != null) {
         Map<String, List<Ingredient>> analysis = 
@@ -86,6 +108,9 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
             MapEntry(key, value.map((e) => e.name).toList())),
         ));
         
+        // Resume scanner after processing
+        await _scannerController?.start();
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -97,6 +122,9 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
           ),
         );
       } else {
+        // Resume scanner after processing
+        await _scannerController?.start();
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -110,6 +138,9 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
         );
       }
     } catch (e) {
+      // Resume scanner in case of error
+      await _scannerController?.start();
+      
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -123,6 +154,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
       );
     }
   }
+
   String _getOverallStatus(Map<String, List<Ingredient>> analysis) {
     if (analysis.isEmpty) return AppText.categoryUnknown;
     if (analysis['haram']?.isNotEmpty == true) {
@@ -137,9 +169,9 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
   }
 
   Future<void> _toggleFlash() async {
-    if (!_hasPermission) return;
+    if (_scannerController == null) return;
     try {
-      await _scannerController.toggleTorch();
+      await _scannerController?.toggleTorch();
       setState(() {
         _isFlashOn = !_isFlashOn;
       });
@@ -226,7 +258,7 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                                       ),
                                       SizedBox(height: 24),
                                       ElevatedButton.icon(
-                                        onPressed: _checkPermission,
+                                        onPressed: _initCamera,
                                         icon: Icon(Icons.camera_alt),
                                         label: Text(AppText.scanBarcodePermissionButton),
                                         style: ElevatedButton.styleFrom(
@@ -247,11 +279,17 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                               : Stack(
                                   children: [
                                     MobileScanner(
-                                      controller: _scannerController,
+                                      controller: _scannerController!,
                                       onDetect: (capture) {
                                         final List<Barcode> barcodes = capture.barcodes;
                                         if (barcodes.isNotEmpty) {
                                           _processBarcode(barcodes.first.rawValue ?? '');
+                                        }
+                                      },
+                                      onScannerStarted: (value) {
+                                        print('Scanner started: $value');
+                                        if (mounted) {
+                                          setState(() {});
                                         }
                                       },
                                     ),
@@ -319,43 +357,53 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
                         ),
                       ),
                       SizedBox(height: isTablet ? 40 : 24),
-                      // Tombol Scan OCR
-                      Container(
-                        width: double.infinity,
-                        constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const ScanOCRScreen()),
-                            );
-                          },
-                          icon: Icon(
-                            Icons.document_scanner,
-                            color: Colors.white,
-                            size: access.iconSize,
-                          ),
-                          label: Text(
-                            AppText.scanCompositionButton,
-                            style: AppStyles.body(context).copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: secondaryColor,
-                            padding: EdgeInsets.symmetric(
-                              vertical: isTablet ? 20 : 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 4,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
+                ),
+              ),
+            ),
+            // Switch Mode Button at bottom
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: TextButton.icon(
+                onPressed: () async {
+                  if (_hasPermission) {
+                    await _scannerController?.stop();
+                    _scannerController?.dispose();
+                    _scannerController = null;
+                  }
+                  if (mounted) {
+                    await Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ScanOCRScreen()),
+                    );
+                  }
+                },
+                icon: Icon(
+                  Icons.document_scanner,
+                  color: secondaryColor,
+                  size: access.iconSize,
+                ),
+                label: Text(
+                  AppText.switchToComposition,
+                  style: TextStyle(
+                    color: secondaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
