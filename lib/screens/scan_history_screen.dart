@@ -4,6 +4,7 @@ import '../models/scan_history.dart';
 import '../models/ingredient.dart';
 import '../services/accessibility_provider.dart'; // Using services version for persistence
 import '../services/history_service.dart';
+import '../services/tts_service.dart'; // Tambahkan import TTS service
 import '../constants/app_constants.dart';
 import '../constants/text_constants.dart';
 
@@ -243,8 +244,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                         ),
                         SizedBox(height: isTablet ? 8 : 6),
                         Row(
-                          children: [
-                            Container(
+                          children: [                            Container(
                               padding: EdgeInsets.symmetric(
                                 horizontal: isTablet ? 12 : 8,
                                 vertical: isTablet ? 6 : 4,
@@ -252,13 +252,27 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                                 color: statusColor,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Text(
-                                item.overallStatus.toUpperCase(),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: isTablet ? 14 : 12,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    item.overallStatus.toUpperCase(),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: isTablet ? 14 : 12,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  InkWell(
+                                    onTap: () => _speakStatus(item.productName, item.overallStatus),
+                                    child: Icon(
+                                      Icons.volume_up,
+                                      color: Colors.white,
+                                      size: isTablet ? 16 : 14,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             if (item.barcode != null) ...[
@@ -404,7 +418,28 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                 padding: EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: [                    // Tombol TTS Besar di Bagian Atas
+                    ElevatedButton.icon(
+                      icon: Icon(Icons.volume_up, size: 28),
+                      label: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: Text(
+                          'Bacakan Status Produk Ini',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: statusColor,
+                        foregroundColor: Colors.white,
+                        minimumSize: Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => _speakStatus(history.productName, history.overallStatus),
+                    ),
+                    SizedBox(height: 16),
+                    
                     // Status Banner
                     Container(
                       padding: EdgeInsets.all(16),
@@ -412,8 +447,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                         color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: statusColor.withOpacity(0.3)),
-                      ),
-                      child: Row(
+                      ),                      child: Row(
                         children: [
                           Icon(
                             history.overallStatus == AppText.categoryHalal
@@ -426,18 +460,30 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                             color: statusColor,
                             size: 24,
                           ),
-                          SizedBox(width: 12),
-                          Expanded(
+                          SizedBox(width: 12),                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  history.overallStatus,
-                                  style: TextStyle(
-                                    color: statusColor,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      history.overallStatus,
+                                      style: TextStyle(
+                                        color: statusColor,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    IconButton(
+                                      icon: Icon(Icons.volume_up, color: statusColor),
+                                      onPressed: () => _speakStatus(history.productName, history.overallStatus),
+                                      tooltip: 'Bacakan status',
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(),
+                                      iconSize: 18,
+                                    ),
+                                  ],
                                 ),
                                 if (history.overallStatus == AppText.categoryHaram)
                                   Text(
@@ -633,8 +679,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                             isMonochromeMode,
                           ),
                         ],
-                      ),
-                    ),
+                      ),                    ),
                   ],
                 ),
               ),
@@ -793,5 +838,10 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
+  }
+
+  // Method untuk memanggil text-to-speech
+  void _speakStatus(String productName, String status) {
+    TTSService.speakProductStatus(productName, status);
   }
 }

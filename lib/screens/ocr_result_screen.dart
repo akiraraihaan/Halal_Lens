@@ -5,8 +5,7 @@ import '../models/ingredient.dart';
 import '../constants/app_constants.dart';
 import '../constants/text_constants.dart';
 import '../services/accessibility_provider.dart';
-import '../services/history_service.dart';
-import '../models/scan_history.dart';
+import '../services/tts_service.dart'; // Tambahkan import TTS service
 import 'scan_ocr_screen.dart';
 
 class OCRResultScreen extends StatelessWidget {
@@ -55,10 +54,15 @@ class OCRResultScreen extends StatelessWidget {
     if (compositionAnalysis['haram']?.isNotEmpty == true) {
       return AppText.haramStatusDescription;
     } else if (compositionAnalysis['syubhat']?.isNotEmpty == true) {
-      return AppText.syubhatStatusDescription;
-    } else {
+      return AppText.syubhatStatusDescription;    } else {
       return AppText.halalStatusDescription;
     }
+  }
+
+  // Method untuk memanggil text-to-speech
+  void _speakStatus(String productLabel) {
+    final status = _getOverallStatus();
+    TTSService.speakProductStatus(productLabel, status);
   }
 
   @override
@@ -116,6 +120,31 @@ class OCRResultScreen extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Tombol TTS Besar untuk Akses Cepat Bantuan Suara
+                      ElevatedButton.icon(
+                        icon: Icon(Icons.volume_up, size: isTablet ? 32 : 28),
+                        label: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                          child: Text(
+                            'Dengarkan Status Produk',
+                            style: TextStyle(
+                              fontSize: isTablet ? 20 : 18, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _getOverallStatusColor(context),
+                          foregroundColor: Colors.white,
+                          minimumSize: Size(double.infinity, isTablet ? 70 : 60),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 4,
+                        ),
+                        onPressed: () => _speakStatus('Hasil scan komposisi'),
+                      ),
+                      SizedBox(height: 20),
                       // Status Banner
                       _buildStatusBanner(
                         _getOverallStatus(),
@@ -511,6 +540,5 @@ class OCRResultScreen extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-} 
+    );  }
+}

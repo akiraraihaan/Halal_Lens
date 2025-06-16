@@ -5,7 +5,7 @@ import '../models/ingredient.dart';
 import '../constants/app_constants.dart';
 import '../constants/text_constants.dart';
 import '../services/accessibility_provider.dart';
-import '../services/history_service.dart';
+import '../services/tts_service.dart'; // Tambahkan import TTS service
 import 'scan_barcode_screen.dart';
 
 class BarcodeResultScreen extends StatelessWidget {
@@ -108,13 +108,37 @@ class BarcodeResultScreen extends StatelessWidget {
             padding: EdgeInsets.all(isTablet ? AppSizes.screenPaddingXLarge : AppSizes.screenPaddingLarge),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (error != null)
+              children: [                if (error != null)
                   _buildErrorCard(error!, primaryColor)
                 else if (product != null)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Tombol TTS Besar untuk Akses Cepat Bantuan Suara
+                      ElevatedButton.icon(
+                        icon: Icon(Icons.volume_up, size: isTablet ? 32 : 28),
+                        label: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                          child: Text(
+                            'Dengarkan Status Produk',
+                            style: TextStyle(
+                              fontSize: isTablet ? 20 : 18, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _getOverallStatusColor(context),
+                          foregroundColor: Colors.white,
+                          minimumSize: Size(double.infinity, isTablet ? 70 : 60),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 4,
+                        ),
+                        onPressed: () => _speakStatus(product?.name ?? barcode ?? 'Produk'),
+                      ),                      SizedBox(height: 20),
+                      
                       // Status Banner
                       _buildStatusBanner(
                         _getOverallStatus(),
@@ -187,9 +211,8 @@ class BarcodeResultScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
+    );  }
+  
   Widget _buildStatusBanner(
     String status,
     Color statusColor,
@@ -715,4 +738,10 @@ class BarcodeResultScreen extends StatelessWidget {
       ],
     );
   }
-} 
+
+  // Method untuk memanggil text-to-speech
+  void _speakStatus(String productName) {
+    final status = _getOverallStatus();
+    TTSService.speakProductStatus(productName, status);
+  }
+}
