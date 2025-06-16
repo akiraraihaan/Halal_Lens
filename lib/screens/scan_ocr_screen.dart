@@ -148,17 +148,18 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
     if (_compositionAnalysis['halal']?.isNotEmpty == true) return 'Halal';
     return 'Tidak Diketahui';
   }
-
   String _getOverallStatusFromAnalysis(Map<String, List<Ingredient>> analysis) {
-    if (analysis.isEmpty) return 'unknown';
+    if (analysis.isEmpty) return AppText.categoryUnknown;
     
     if (analysis['haram']?.isNotEmpty == true) {
-      return 'haram';
+      return AppText.categoryHaram;
     } else if (analysis['meragukan']?.isNotEmpty == true || 
                analysis['unknown']?.isNotEmpty == true) {
-      return 'meragukan';
+      return AppText.categoryMeragukan;
+    } else if (analysis['halal']?.isNotEmpty == true) {
+      return AppText.categoryHalal;
     } else {
-      return 'halal';
+      return AppText.categoryUnknown;
     }
   }
 
@@ -452,7 +453,7 @@ class _ScanOCRScreenState extends State<ScanOCRScreen> {
                                 const SizedBox(height: 12),
                               ],
                               
-                              if (_compositionAnalysis['meragukan']?.isNotEmpty == true) ...[
+                if (_compositionAnalysis['meragukan']?.isNotEmpty == true) ...[
                                 _buildCompositionSection('Bahan Meragukan', _compositionAnalysis['meragukan']!, Colors.orange),
                                 const SizedBox(height: 12),
                               ],

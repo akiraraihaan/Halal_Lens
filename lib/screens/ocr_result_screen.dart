@@ -21,40 +21,40 @@ class OCRResultScreen extends StatelessWidget {
     required this.compositionAnalysis,
     this.error,
   }) : super(key: key);
-
   String _getOverallStatus() {
     if (compositionAnalysis.isEmpty) return AppText.categoryUnknown;
     if (compositionAnalysis['haram']?.isNotEmpty == true) {
       return AppText.categoryHaram;
-    } else if (compositionAnalysis['syubhat']?.isNotEmpty == true) {
+    } else if (compositionAnalysis['meragukan']?.isNotEmpty == true || compositionAnalysis['unknown']?.isNotEmpty == true) {
       return AppText.categoryMeragukan;
-    } else {
+    } else if (compositionAnalysis['halal']?.isNotEmpty == true) {
       return AppText.categoryHalal;
+    } else {
+      return AppText.categoryUnknown;
     }
   }
 
   Color _getOverallStatusColor(BuildContext context) {
     final access = Provider.of<AccessibilityProvider>(context);
-    final isMonochromeMode = access.isColorBlindMode;
-
-    if (compositionAnalysis.isEmpty) return AppColors.grey;
+    final isMonochromeMode = access.isColorBlindMode;    if (compositionAnalysis.isEmpty) return AppColors.grey;
     if (compositionAnalysis['haram']?.isNotEmpty == true) {
       return isMonochromeMode ? AppColors.errorMonochrome : AppColors.error;
-    } else if (compositionAnalysis['syubhat']?.isNotEmpty == true) {
+    } else if (compositionAnalysis['meragukan']?.isNotEmpty == true || compositionAnalysis['unknown']?.isNotEmpty == true) {
       return isMonochromeMode ? AppColors.warningMonochrome : AppColors.warning;
-    } else {
+    } else if (compositionAnalysis['halal']?.isNotEmpty == true) {
       return isMonochromeMode ? AppColors.successMonochrome : AppColors.success;
+    } else {
+      return AppColors.grey;
     }
   }
-
   String _getStatusDescription() {
     if (compositionAnalysis.isEmpty) {
       return AppText.unknownStatusDescription;
     }
     if (compositionAnalysis['haram']?.isNotEmpty == true) {
       return AppText.haramStatusDescription;
-    } else if (compositionAnalysis['syubhat']?.isNotEmpty == true) {
-      return AppText.syubhatStatusDescription;    } else {
+    } else if (compositionAnalysis['meragukan']?.isNotEmpty == true || compositionAnalysis['unknown']?.isNotEmpty == true) {
+      return AppText.syubhatStatusDescription;} else {
       return AppText.halalStatusDescription;
     }
   }
@@ -314,7 +314,6 @@ class OCRResultScreen extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildCompositionAnalysis(
     Map<String, List<Ingredient>> analysis,
     bool isTablet,
@@ -322,6 +321,56 @@ class OCRResultScreen extends StatelessWidget {
     Color textColor,
     bool isMonochromeMode,
   ) {
+    // Check if there are any ingredients
+    bool hasIngredients = 
+        analysis['halal']?.isNotEmpty == true || 
+        analysis['haram']?.isNotEmpty == true || 
+        analysis['syubhat']?.isNotEmpty == true || 
+        analysis['unknown']?.isNotEmpty == true;
+    
+    // Display special message if analysis is empty
+    if (!hasIngredients) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppText.compositionAnalysis,
+            style: TextStyle(
+              fontSize: isTablet ? 20 : 18,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+          SizedBox(height: 16),
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                'Tidak ada data komposisi yang tersedia',
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
+                  color: textColor.withOpacity(0.6),
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -348,6 +397,15 @@ class OCRResultScreen extends StatelessWidget {
           ),
           child: Column(
             children: [
+              // Halal Ingredients - Show halal ingredients first
+              if (analysis['halal']?.isNotEmpty == true)
+                _buildIngredientSection(
+                  AppText.categoryHalal,
+                  analysis['halal']!,
+                  isMonochromeMode ? AppColors.successMonochrome : AppColors.success,
+                  isTablet,
+                  textColor,
+                ),
               // Haram Ingredients
               if (analysis['haram']?.isNotEmpty == true)
                 _buildIngredientSection(
@@ -372,15 +430,6 @@ class OCRResultScreen extends StatelessWidget {
                   AppText.categoryUnknown,
                   analysis['unknown']!,
                   isMonochromeMode ? AppColors.textSecondaryMonochrome : AppColors.grey,
-                  isTablet,
-                  textColor,
-                ),
-              // Halal Ingredients
-              if (analysis['halal']?.isNotEmpty == true)
-                _buildIngredientSection(
-                  AppText.categoryHalal,
-                  analysis['halal']!,
-                  isMonochromeMode ? AppColors.successMonochrome : AppColors.success,
                   isTablet,
                   textColor,
                 ),

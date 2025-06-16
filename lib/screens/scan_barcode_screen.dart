@@ -123,15 +123,16 @@ class _ScanBarcodeScreenState extends State<ScanBarcodeScreen> {
       );
     }
   }
-
   String _getOverallStatus(Map<String, List<Ingredient>> analysis) {
     if (analysis.isEmpty) return AppText.categoryUnknown;
     if (analysis['haram']?.isNotEmpty == true) {
       return AppText.categoryHaram;
-    } else if (analysis['syubhat']?.isNotEmpty == true) {
+    } else if (analysis['meragukan']?.isNotEmpty == true || analysis['unknown']?.isNotEmpty == true) {
       return AppText.categoryMeragukan;
-    } else {
+    } else if (analysis['halal']?.isNotEmpty == true) {
       return AppText.categoryHalal;
+    } else {
+      return AppText.categoryUnknown;
     }
   }
 

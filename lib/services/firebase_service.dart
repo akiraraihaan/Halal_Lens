@@ -44,8 +44,7 @@ class FirebaseService {
       return [];
     }
   }
-  
-  // Get all products
+    // Get all products
   static Future<List<Product>> getAllProducts() async {
     try {
       QuerySnapshot querySnapshot = await _firestore
@@ -68,27 +67,45 @@ class FirebaseService {
     Map<String, List<Ingredient>> result = {
       'halal': [],
       'haram': [],
-      'syubhat': [],
+      'meragukan': [], // Changed from 'syubhat' to 'meragukan' for consistency
       'unknown': []
     };
-
+    
     for (String ingredient in ingredients) {
-      final doc = await _firestore.collection('ingredients').doc(ingredient.toLowerCase()).get();
+      String cleanIngredient = ingredient.trim();
       
-      if (doc.exists) {
+      // Try lowercase version first (most common format in database)
+      DocumentSnapshot doc = await _firestore.collection('ingredients').doc(cleanIngredient.toLowerCase()).get();
+      
+      // If not found, try original case
+      if (!doc.exists) {
+        doc = await _firestore.collection('ingredients').doc(cleanIngredient).get();
+      }
+        if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        final status = data['status'] as String;
+        String status = (data['status'] as String? ?? 'unknown').toLowerCase();
+        
+        // Ensure status is one of our expected values and map 'syubhat' to 'meragukan'
+        String normalizedStatus = status;
+        if (normalizedStatus == 'syubhat') {
+          normalizedStatus = 'meragukan';
+        } else if (!['halal', 'haram', 'meragukan'].contains(normalizedStatus)) {
+          normalizedStatus = 'unknown';
+        }
+        
         final ingredientObj = Ingredient(
-          name: ingredient,
-          status: status,
+          name: cleanIngredient,
+          status: normalizedStatus,
           description: data['description'] as String? ?? '',
           justification: data['justification'] as String? ?? 'Berdasarkan database halal',
         );
         
-        result[status]?.add(ingredientObj);
+        // Make sure the ingredient is added to the correct list
+        result[normalizedStatus]?.add(ingredientObj);
       } else {
+        // Fallback for unknown ingredients
         result['unknown']?.add(Ingredient(
-          name: ingredient,
+          name: cleanIngredient,
           status: 'unknown',
           description: 'Bahan tidak ditemukan dalam database',
           justification: 'Perlu penelitian lebih lanjut',
