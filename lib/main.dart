@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'services/data_migration_service.dart';
-import 'services/accessibility_provider.dart';
+import 'services/accessibility_provider.dart'; // Using services version for persistence
 import 'constants/app_constants.dart';
 // import 'firebase_options.dart'; // Uncomment if using generated firebase_options
 
@@ -29,15 +29,16 @@ class MyApp extends StatelessWidget {
 
   // This widget is the root of your application.  @override
   Widget build(BuildContext context) {
-    final access = Provider.of<AccessibilityProvider>(context);
-    
-    // Buat theme data yang dapat digunakan di seluruh aplikasi
-    return MaterialApp(
-      title: 'Halal Lens',
-      theme: ThemeData(
-        // Menggunakan warna monokrom jika mode buta warna aktif
-        primaryColor: access.isColorBlindMode ? AppColors.primaryMonochrome : AppColors.primary,
-        scaffoldBackgroundColor: access.isColorBlindMode ? AppColors.backgroundMonochrome : AppColors.background,
+    // Use Consumer instead of Provider.of to safely access the provider
+    return Consumer<AccessibilityProvider>(
+      builder: (context, access, _) {
+        // Buat theme data yang dapat digunakan di seluruh aplikasi
+        return MaterialApp(
+          title: 'Halal Lens',
+          theme: ThemeData(
+            // Menggunakan warna monokrom jika mode buta warna aktif
+            primaryColor: access.isColorBlindMode ? AppColors.primaryMonochrome : AppColors.primary,
+            scaffoldBackgroundColor: access.isColorBlindMode ? AppColors.backgroundMonochrome : AppColors.background,
         
         colorScheme: access.isColorBlindMode 
           ? ColorScheme.light(
@@ -104,10 +105,11 @@ class MyApp extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppSizes.buttonBorderRadius),
             ),
           ),
-        ),
-      ),
+        ),      ),
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }

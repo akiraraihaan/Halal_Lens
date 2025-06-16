@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/scan_history.dart';
 import '../models/ingredient.dart';
-import '../services/accessibility_provider.dart';
+import '../services/accessibility_provider.dart'; // Using services version for persistence
 import '../services/history_service.dart';
 import '../constants/app_constants.dart';
 import '../constants/text_constants.dart';
@@ -67,19 +67,18 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
         ],
       ),
     );
-  }
-
-  Color _getStatusColor(String status, BuildContext context) {
+  }  Color _getStatusColor(String status, BuildContext context) {
     final access = Provider.of<AccessibilityProvider>(context, listen: false);
     final isMonochromeMode = access.isColorBlindMode;
-
-    switch (status) {
-      case AppText.categoryHalal:
+    
+    // Apply proper color handling based on color blind mode
+    switch (status.toUpperCase()) {
+      case 'HARAM':
+        return isMonochromeMode ? AppColors.errorMonochrome : AppColors.haram;
+      case 'MERAGUKAN':
+        return isMonochromeMode ? AppColors.warningMonochrome : AppColors.syubhat;
+      case 'HALAL':
         return isMonochromeMode ? AppColors.successMonochrome : AppColors.success;
-      case AppText.categoryHaram:
-        return isMonochromeMode ? AppColors.errorMonochrome : AppColors.error;
-      case AppText.categoryMeragukan:
-        return isMonochromeMode ? AppColors.warningMonochrome : AppColors.warning;
       default:
         return isMonochromeMode ? AppColors.textSecondaryMonochrome : AppColors.grey;
     }
@@ -88,22 +87,20 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
   IconData _getScanTypeIcon(String scanType) {
     return scanType == 'barcode' ? Icons.qr_code_scanner : Icons.document_scanner;
   }
-
   @override
   Widget build(BuildContext context) {
     final access = Provider.of<AccessibilityProvider>(context);
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
+    // Explicitly get the color blind mode status (for debugging)
     final isMonochromeMode = access.isColorBlindMode;
-
+    print("Build method - Color blind mode: $isMonochromeMode");
+    
+    // Use direct color values instead of constants
     final backgroundColor = isMonochromeMode ? 
-      AppColors.backgroundMonochrome : AppColors.background;
+      Color(0xFFF5F5F5) : Color(0xFFE8F5E9);
     final textColor = isMonochromeMode ? 
-      AppColors.textPrimaryMonochrome : AppColors.textPrimary;
-    final primaryColor = isMonochromeMode ? 
-      AppColors.primaryMonochrome : AppColors.primary;
-    final secondaryColor = isMonochromeMode ? 
-      AppColors.secondaryMonochrome : AppColors.secondary;
+      Color(0xFF333333) : Color(0xFF166138);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -251,8 +248,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                               padding: EdgeInsets.symmetric(
                                 horizontal: isTablet ? 12 : 8,
                                 vertical: isTablet ? 6 : 4,
-                              ),
-                              decoration: BoxDecoration(
+                              ),                              decoration: BoxDecoration(
                                 color: statusColor,
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -282,11 +278,10 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
+                  ),                  IconButton(
                     icon: Icon(
                       Icons.delete_outline,
-                      color: isMonochromeMode ? AppColors.errorMonochrome : AppColors.error,
+                      color: isMonochromeMode ? Color(0xFF333333) : Color(0xFFE53935), // Use direct colors
                       size: access.iconSize,
                     ),
                     onPressed: () => _deleteHistoryItem(item.id),
@@ -351,10 +346,10 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
       ),
     );
   }
-
   void _showHistoryDetails(ScanHistory history) {
     final access = Provider.of<AccessibilityProvider>(context, listen: false);
     final isMonochromeMode = access.isColorBlindMode;
+    print("Show details - Status: ${history.overallStatus}, ColorBlind: $isMonochromeMode");
     final statusColor = _getStatusColor(history.overallStatus, context);
 
     showModalBottomSheet(
