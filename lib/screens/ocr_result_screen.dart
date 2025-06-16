@@ -128,7 +128,7 @@ class OCRResultScreen extends StatelessWidget {
                         label: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
                           child: Text(
-                            'Dengarkan Status Produk',
+                            AppText.listenProductStatus,
                             style: TextStyle(
                               fontSize: isTablet ? 20 : 18, 
                               fontWeight: FontWeight.bold
@@ -144,7 +144,7 @@ class OCRResultScreen extends StatelessWidget {
                           ),
                           elevation: 4,
                         ),
-                        onPressed: () => _speakStatus('Hasil scan komposisi'),
+                        onPressed: () => _speakStatus(AppText.scanResultTitle),
                       ),
                       SizedBox(height: 20),
                       // Status Banner
@@ -359,7 +359,7 @@ class OCRResultScreen extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                'Tidak ada data komposisi yang tersedia',
+                AppText.noCompositionData,
                 style: TextStyle(
                   fontSize: isTablet ? 16 : 14,
                   color: textColor.withOpacity(0.6),

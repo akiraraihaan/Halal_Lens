@@ -279,7 +279,7 @@ class HomePage extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: isTablet ? 160 : 160,
+          width: isTablet ? 160 : 140,
           height: isTablet ? 200 : 200,
           padding: EdgeInsets.all(isTablet ? 24 : 12),
           decoration: BoxDecoration(
